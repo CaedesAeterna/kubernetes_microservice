@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tiamat-fastapi-nginx-app
+  labels:
+    app: tiamat-fastapi-nginx-app
+    environment: development
+spec:
+  containers:
+  - name: nginx
+    image: registry.digitalocean.com/tiamat/fastapi-nginx:1
+    ports:
+    - containerPort: 80
+      name: http
+    resources:
+      requests:
+        memory: "12Mi"
+        cpu: "150m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+  imagePullSecrets:
+  - name: tiamat-registry-secret
+  restartPolicy: Always
+    

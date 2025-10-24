@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: alma-service
+spec:
+  selector:
+    app: alma
+    #type: NodePort
+    #type: LoadBalancer
+  ports:
+    - port: 5678 # Default port for image

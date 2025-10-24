@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alma-app
+  labels:
+    app: alma
+spec:
+  containers:
+    - name: alma-app
+      image: hashicorp/http-echo
+      args:
+        - "-text=alma"

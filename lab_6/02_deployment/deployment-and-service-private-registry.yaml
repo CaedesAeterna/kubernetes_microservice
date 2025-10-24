@@ -1,0 +1,40 @@
+apiVersion: apps/v1 #version of the API to use
+kind: Deployment #what kind of object we're deploying
+metadata: #information about our object we're deploying
+  name: fg-deployment #ame of the deployment
+  labels: #a labels on the deployments created
+    owner: fg
+spec: #specifications for our object
+  replicas: 2 #the number of pods that should always be running
+  selector: #which pods the replica set should be responsible for
+    matchLabels:
+      app: fg-app #any pods with labels matching this I'm responsible for
+  template: #the pod template that gets deployed
+    metadata:
+      labels: #labels on the replica set and pods created
+        app: fg-app
+    spec:
+      containers:
+      - name: nginx-container #the name of the container within the pod
+        image: registry.digitalocean.com/tiamat/tiamat-fastapi-nginx:v2.0.1 #which container image should be pulled
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80 #the port of the container within the pod
+          protocol: TCP 
+      imagePullSecrets:
+        - name: tiamat-registry-secret
+---
+apiVersion: v1 #version of the API to use
+kind: Service #what kind of object we're deploying
+metadata: #information about our object we're deploying
+  name: fg-service #aame of the service
+  labels:
+    owner: fg
+spec: #specifications for our object
+  type: LoadBalancer #Ignore for now
+  ports: #Ignore for now
+  - name: http
+    port: 80 
+    protocol: TCP
+  selector: #label selector used to identify pods
+    app: fg-app

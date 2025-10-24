@@ -1,0 +1,18 @@
+# pod-with-containerport.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-demo
+  labels:
+    app: nginx
+    owner: the_end_of_cycle
+    project: sapi
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.25
+    ports:
+    - containerPort: 80        # Container listens on port 80
+      protocol: TCP
+      name: http               # Optional: name for the port
+

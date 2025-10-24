@@ -1,0 +1,16 @@
+#DigitalOcean only
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: lb-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: deployment.k8s.codespring.ro
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: lb-service
+              servicePort: 80  

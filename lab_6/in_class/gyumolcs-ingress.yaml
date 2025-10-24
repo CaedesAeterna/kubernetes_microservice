@@ -1,0 +1,25 @@
+#DigitalOcean only
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alma-korte
+spec:
+  ingressClassName: nginx
+  rules:
+    - host:
+      http:
+        paths:
+          - path: /alma
+            pathType: Prefix
+            backend:
+              service:
+                name: alma-service
+                port:
+                  number: 5678
+          - path: /korte
+            pathType: Prefix
+            backend:
+              service:
+                name: korte-service
+                port:
+                  number: 5678

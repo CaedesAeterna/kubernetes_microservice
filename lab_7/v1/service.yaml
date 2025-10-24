@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tiamat-fastapi-nginx-app
+spec:
+  type: ClusterIP
+  selector:
+    app: tiamat-fastapi-nginx-app
+    environment: development
+  ports:
+  # ingress sends traffic to port 8080 (ClusterIP), which routes to container port 80.
+  # This indirection allows changing container port without changing ingress.
+  - port: 8080              # Service listens on port 8080
+    targetPort: 80          # Forwards to pod port 80
+    name: http

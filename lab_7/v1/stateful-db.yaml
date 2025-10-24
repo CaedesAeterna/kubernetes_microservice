@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tiamat-db
+spec:
+  serviceName: "tiamat-db"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tiamat-db
+  template:
+    metadata:
+      labels:
+        app: tiamat-db
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "rootpassword"
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-pvc
+          mountPath: /var/lib/mysql
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: init-scripts
+        configMap:
+          name: mysql-init-scripts
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-pvc
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tiamat-db
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  clusterIP: None
+  selector:
+    app: tiamat-db

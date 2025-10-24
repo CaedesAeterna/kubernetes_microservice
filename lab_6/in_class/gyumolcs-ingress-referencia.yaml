@@ -1,0 +1,21 @@
+#DigitalOcean only
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lb-alma-korte
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    #- host: lbalmakorte.k8s.codespring.ro
+    - host: almakorte.cs-test-kube.codespring.ro
+      http:
+        paths:
+          - path: /alma
+            backend:
+              serviceName: lb-alma-service
+              servicePort: 5678
+          - path: /korte
+            backend:
+              serviceName: lb-korte-service
+              servicePort: 5678

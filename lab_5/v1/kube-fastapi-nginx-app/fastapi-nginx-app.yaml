@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fastapi-nginx-app
+  labels:
+    app: fastapi-nginx-app
+    environment: development
+spec:
+  containers:
+  - name: nginx
+    image: caedesaeterna/fastapi-nginx:latest
+    ports:
+    - containerPort: 80
+      name: http
+    resources:
+      requests:
+        memory: "12Mi"
+        cpu: "150m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
