@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mysql-seed-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: mysql-client
+        image: mysql:8
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "Waiting for MySQL to be ready..." &&
+            until mysqladmin ping -h tiamat-db-0.tiamat-db.default.svc.cluster.local -u root -prootpassword --silent; do
+              sleep 3
+            done &&
+            echo "Running SQL seed..." &&
+            mysql -h tiamat-db-0.tiamat-db.default.svc.cluster.local -u root -prootpassword < /scripts/seed.sql
+        volumeMounts:
+        - name: seed-sql
+          mountPath: /scripts
+      restartPolicy: OnFailure
+      volumes:
+      - name: seed-sql
+        configMap:
+          name: mysql-seed-sql
