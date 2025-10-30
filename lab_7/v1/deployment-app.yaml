@@ -39,11 +39,11 @@ spec:
           name: http
         resources:
           requests:
-            memory: "32Mi"
-            cpu: "50m"
+            memory: "60Mi"
+            cpu: "25m"
           limits:
-            memory: "64Mi"
-            cpu: "60m"
+            memory: "70Mi"
+            cpu: "30m"
       imagePullSecrets:
       - name: tiamat-registry-secret
       restartPolicy: Always

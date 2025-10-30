@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-seed-sql
+data:
+  seed.sql: |
+    USE testdb;
+    DROP TABLE IF EXISTS test_table;
+
+    CREATE TABLE test_table (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) UNIQUE,
+        score INT
+    );
+
+    INSERT INTO test_table (name, score) VALUES
+    ('Alice', 95),
+    ('Bob', 87),
+    ('Charlie', 72),
+    ('David', 65),
+    ('Eve', 88)
+    ON DUPLICATE KEY UPDATE score=VALUES(score);
