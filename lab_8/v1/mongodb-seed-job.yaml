@@ -1,0 +1,154 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-seed-data
+data:
+  seed-data.js: |
+    // Switch to sample database
+    db = db.getSiblingDB('sampledb');
+    
+    // Create users collection with sample data
+    db.users.insertMany([
+      {
+        name: "John Doe",
+        email: "john@example.com",
+        age: 30,
+        role: "developer",
+        createdAt: new Date(),
+        skills: ["JavaScript", "Python", "MongoDB"]
+      },
+      {
+        name: "Jane Smith",
+        email: "jane@example.com",
+        age: 28,
+        role: "designer",
+        createdAt: new Date(),
+        skills: ["UI/UX", "Figma", "Adobe Creative Suite"]
+      },
+      {
+        name: "Bob Johnson",
+        email: "bob@example.com",
+        age: 35,
+        role: "manager",
+        createdAt: new Date(),
+        skills: ["Project Management", "Leadership", "Agile"]
+      }
+    ]);
+    
+    // Create products collection with sample data
+    db.products.insertMany([
+      {
+        name: "Laptop",
+        price: 999.99,
+        category: "electronics",
+        inStock: true,
+        quantity: 50,
+        description: "High-performance laptop for professionals",
+        tags: ["computer", "work", "portable"]
+      },
+      {
+        name: "Coffee Mug",
+        price: 15.99,
+        category: "kitchen",
+        inStock: true,
+        quantity: 200,
+        description: "Ceramic coffee mug with company logo",
+        tags: ["beverage", "office", "ceramic"]
+      },
+      {
+        name: "Smartphone",
+        price: 799.99,
+        category: "electronics",
+        inStock: false,
+        quantity: 0,
+        description: "Latest smartphone with advanced features",
+        tags: ["mobile", "communication", "technology"]
+      }
+    ]);
+    
+    // Create orders collection with sample data
+    db.orders.insertMany([
+      {
+        orderId: "ORD-001",
+        userId: "john@example.com",
+        items: [
+          { productName: "Laptop", quantity: 1, price: 999.99 },
+          { productName: "Coffee Mug", quantity: 2, price: 15.99 }
+        ],
+        total: 1031.97,
+        status: "completed",
+        orderDate: new Date("2024-01-15"),
+        shippingAddress: {
+          street: "123 Main St",
+          city: "New York",
+          state: "NY",
+          zipCode: "10001"
+        }
+      },
+      {
+        orderId: "ORD-002",
+        userId: "jane@example.com",
+        items: [
+          { productName: "Smartphone", quantity: 1, price: 799.99 }
+        ],
+        total: 799.99,
+        status: "pending",
+        orderDate: new Date("2024-01-20"),
+        shippingAddress: {
+          street: "456 Oak Ave",
+          city: "Los Angeles",
+          state: "CA",
+          zipCode: "90210"
+        }
+      }
+    ]);
+    
+    // Create indexes for better performance
+    db.users.createIndex({ email: 1 }, { unique: true });
+    db.products.createIndex({ category: 1 });
+    db.products.createIndex({ name: "text", description: "text" });
+    db.orders.createIndex({ userId: 1 });
+    db.orders.createIndex({ orderDate: -1 });
+    
+    print("Sample data inserted successfully!");
+    print("Collections created:");
+    print("- users: " + db.users.countDocuments() + " documents");
+    print("- products: " + db.products.countDocuments() + " documents");
+    print("- orders: " + db.orders.countDocuments() + " documents");
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongo-seed-data
+spec:
+  template:
+    spec:
+      containers:
+      - name: mongo-seed
+        image: mongo:8.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Waiting for MongoDB replica set to be ready..."
+          
+          # Wait for primary to be available
+          until mongosh --host mongo-0.mongo:27017 --eval "rs.status()" | grep -q PRIMARY; do
+            echo "Waiting for primary node..."
+            sleep 5
+          done
+          
+          echo "Primary node found, seeding database with sample data..."
+          mongosh --host mongo-0.mongo:27017 /seed-data/seed-data.js
+          
+          echo "Data seeding completed!"
+        volumeMounts:
+        - name: seed-data
+          mountPath: /seed-data
+      volumes:
+      - name: seed-data
+        configMap:
+          name: mongo-seed-data
+      restartPolicy: OnFailure
+  backoffLimit: 3

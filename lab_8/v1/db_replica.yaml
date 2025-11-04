@@ -1,0 +1,156 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tiamat-db-secret
+type: Opaque
+stringData:
+  mysql-root-password: rootpassword
+  mysql-replication-user: replica_user
+  mysql-replication-password: replica_pass
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tiamat-db
+spec:
+  clusterIP: None
+  selector:
+    app: tiamat-db
+  ports:
+    - port: 3306
+      name: mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tiamat-db
+spec:
+  serviceName: "tiamat-db"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: tiamat-db
+  template:
+    metadata:
+      labels:
+        app: tiamat-db
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8
+        ports:
+          - containerPort: 3306
+            name: mysql
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: tiamat-db-secret
+                key: mysql-root-password
+          - name: MYSQL_REPLICATION_USER
+            valueFrom:
+              secretKeyRef:
+                name: tiamat-db-secret
+                key: mysql-replication-user
+          - name: MYSQL_REPLICATION_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: tiamat-db-secret
+                key: mysql-replication-password
+        volumeMounts:
+          - name: mysql-config
+            mountPath: /etc/mysql/conf.d
+          - name: mysql-scripts
+            mountPath: /scripts
+          - name: mysql-pvc
+            mountPath: /var/lib/mysql
+        command: ["/bin/bash", "/scripts/entrypoint.sh"]
+      volumes:
+        - name: mysql-config
+          configMap:
+            name: mysql-config
+            items:
+              - key: my.cnf
+                path: my.cnf
+        - name: mysql-scripts
+          configMap:
+            name: mysql-config
+            items:
+              - key: entrypoint.sh
+                path: entrypoint.sh
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-pvc
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: do-block-storage   
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+data:
+  my.cnf: |
+    [mysqld]
+    log_bin=mysql-bin
+    binlog_format=ROW
+    gtid_mode=ON
+    enforce_gtid_consistency=ON
+    server-id=1
+    relay_log=relay-bin
+    read_only=0
+    skip-name-resolve
+
+  entrypoint.sh: |
+    #!/bin/bash
+    set -e
+
+    # Use K8s-provided HOSTNAME
+    HOSTNAME=${HOSTNAME:-$(hostname)}
+    POD_INDEX=${HOSTNAME##*-}
+
+    # Prepare writable config
+    mkdir -p /etc/mysql/writable-conf
+    cp /etc/mysql/conf.d/my.cnf /etc/mysql/writable-conf/my.cnf
+    sed -i "s/^server-id=.*/server-id=$((POD_INDEX+1))/" /etc/mysql/writable-conf/my.cnf
+
+    # Start MySQL in the background
+    docker-entrypoint.sh --defaults-file=/etc/mysql/writable-conf/my.cnf &
+
+    # Wait for MySQL to be ready
+    until mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD" --silent; do
+      sleep 5
+    done
+
+    PRIMARY_HOST="tiamat-db-0.tiamat-db.default.svc.cluster.local"
+
+    if [[ "$POD_INDEX" == "0" ]]; then
+      echo "Primary node ready"
+    else
+      echo "Configuring replica $HOSTNAME"
+
+      # Create replication user on primary
+      until mysql -h "$PRIMARY_HOST" -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1" &>/dev/null; do
+        sleep 5
+      done
+
+      mysql -h "$PRIMARY_HOST" -uroot -p"$MYSQL_ROOT_PASSWORD" \
+        -e "CREATE USER IF NOT EXISTS '$MYSQL_REPLICATION_USER'@'%' IDENTIFIED BY '$MYSQL_REPLICATION_PASSWORD'; GRANT REPLICATION SLAVE ON *.* TO '$MYSQL_REPLICATION_USER'@'%'; FLUSH PRIVILEGES;"
+
+      # Configure this pod as replica
+      mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "
+        CHANGE REPLICATION SOURCE TO
+          SOURCE_HOST='$PRIMARY_HOST',
+          SOURCE_USER='$MYSQL_REPLICATION_USER',
+          SOURCE_PASSWORD='$MYSQL_REPLICATION_PASSWORD',
+          SOURCE_AUTO_POSITION=1;
+        START REPLICA;
+      "
+    fi
+
+    # Keep MySQL running in foreground
+    wait

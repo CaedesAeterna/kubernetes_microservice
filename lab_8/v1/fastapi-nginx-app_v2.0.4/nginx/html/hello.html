@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hello World</title>
+    <style>
+      body { font-family: Arial, sans-serif; display:flex; height:100vh; align-items:center; justify-content:center; background:#f6f8fa; }
+      .card { background:#fff; padding:2rem; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.08); text-align:center }
+      button { padding:0.6rem 1rem; border-radius:6px; border:1px solid #0366d6; background:#2ea44f; color:white; cursor:pointer }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Hello World</h1>
+      <p>This page is served by Nginx directly.</p>
+      <button id="btn">Click me</button>
+      <p id="msg" style="margin-top:1rem;color:#333"></p>
+      <button id="btn2">Click me too</button>
+      <p id="msg2" style="margin-top:1rem;color:#333"></p>
+    </div>
+
+    <script>
+      document.getElementById('btn').addEventListener('click', async () => {
+        const msg = document.getElementById('msg');
+        try {
+          const r = await fetch('/healthz');
+          const data = await r.json();
+          msg.textContent = 'FastAPI health: ' + JSON.stringify(data);
+        } catch (err) {
+          msg.textContent = 'Error contacting FastAPI: ' + err.message;
+        }
+      });
+      document.getElementById('btn2').addEventListener('click', async () => {
+        const msg2 = document.getElementById('msg2');
+        try {
+          const r = await fetch('/data');
+          const data = await r.json();
+          msg2.textContent = 'FastAPI hello: ' + JSON.stringify(data);
+        } catch (err) {
+          msg2.textContent = 'Error contacting FastAPI: ' + err.message;
+        }
+      });
+
+    </script>
+  </body>
+</html>
