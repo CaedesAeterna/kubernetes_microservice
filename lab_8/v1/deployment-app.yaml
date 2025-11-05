@@ -20,18 +20,18 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: registry.digitalocean.com/tiamat/tiamat-fastapi-nginx:v2.0.4
+        image: registry.digitalocean.com/tiamat/tiamat-fastapi-nginx:v2.0.4.mongo
         env:
-        - name: DB_HOST
-          value: "tiamat-db-0.tiamat-db.default.svc.cluster.local"
-        - name: DB_PORT
-          value: "3306"
-        - name: DB_NAME
-          value: "testdb"
-        - name: DB_USER
-          value: "root"
-        - name: DB_PASSWORD
-          value: "rootpassword"
+        # - name: DB_HOST
+        #   value: "tiamat-db-0.tiamat-db.default.svc.cluster.local"
+        # - name: DB_PORT
+        #   value: "3306"
+        # - name: DB_NAME
+        #   value: "testdb"
+        # - name: DB_USER
+        #   value: "root"
+        # - name: DB_PASSWORD
+        #   value: "rootpassword"
         
 
         ports:
@@ -39,11 +39,11 @@ spec:
           name: http
         resources:
           requests:
-            memory: "60Mi"
-            cpu: "25m"
+            memory: "80Mi"
+            cpu: "100m"
           limits:
-            memory: "70Mi"
-            cpu: "30m"
+            memory: "160Mi"
+            cpu: "150m"
       imagePullSecrets:
       - name: tiamat-registry-secret
       restartPolicy: Always
