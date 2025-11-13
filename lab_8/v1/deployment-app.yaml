@@ -22,17 +22,17 @@ spec:
       - name: nginx
         image: registry.digitalocean.com/tiamat/tiamat-fastapi-nginx:v2.0.4.mongo
         env:
-        # - name: DB_HOST
-        #   value: "tiamat-db-0.tiamat-db.default.svc.cluster.local"
-        # - name: DB_PORT
-        #   value: "3306"
-        # - name: DB_NAME
-        #   value: "testdb"
-        # - name: DB_USER
-        #   value: "root"
-        # - name: DB_PASSWORD
-        #   value: "rootpassword"
-        
+        - name: DB_HOST
+          value: "mongo-0.mongo.default.svc.cluster.local"
+        - name: DB_PORT
+          value: "27017"
+        - name: DB_NAME
+          value: "sampledb"
+        - name: DB_USER
+          value: ""
+        - name: DB_PASSWORD
+          value: ""
+          
 
         ports:
         - containerPort: 80
