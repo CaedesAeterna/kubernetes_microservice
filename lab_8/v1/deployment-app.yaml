@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tiamat-fastapi-nginx-app-deployment
+  labels:
+    app: tiamat-fastapi-nginx-app
+    pathType: ImplementationSpecific
+    environment: development
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tiamat-fastapi-nginx-app
+      environment: development
+  template:
+    metadata:
+      labels:
+        app: tiamat-fastapi-nginx-app
+        environment: development
+    spec:
+      containers:
+      - name: nginx
+        image: registry.digitalocean.com/tiamat/tiamat-fastapi-nginx:v2.0.4.mongo
+        env:
+        - name: DB_HOST
+          value: "mongo-0.mongo.default.svc.cluster.local"
+        - name: DB_PORT
+          value: "27017"
+        - name: DB_NAME
+          value: "sampledb"
+        - name: DB_USER
+          value: ""
+        - name: DB_PASSWORD
+          value: ""
+          
+
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            memory: "80Mi"
+            cpu: "100m"
+          limits:
+            memory: "160Mi"
+            cpu: "150m"
+      imagePullSecrets:
+      - name: tiamat-registry-secret
+      restartPolicy: Always
