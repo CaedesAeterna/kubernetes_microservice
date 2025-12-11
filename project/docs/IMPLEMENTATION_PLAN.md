@@ -62,7 +62,7 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 ### 3.1 Containerization
 *   ✅ Dockerfiles created for all services.
 *   ✅ Images built and loaded into Minikube.
-*   ✅ Semantic Versioning implemented (Current: `1.1.10`).
+*   ✅ Semantic Versioning implemented (Current: `1.1.11`).
 
 ### 3.2 Kubernetes Deployment Manifests
 *   ✅ Deployments and Services created in `k8s/apps/`.
@@ -89,8 +89,8 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 10. ✅ **Feature Expansion:** Added Search, Profile Stats, extended Media Types, History, Aggregator Service, Caching.
 
 ## Next Steps / Future Work
-*   **Notification Service:** Email users on updates (Go/Kafka).
 *   **Search Service:** Upgrade to Elasticsearch for fuzzy search.
 *   **Recommendation Engine:** Suggest media based on user history (Python/Redis).
+*   **Advanced Notifications:** Email users when new episodes of tracked series are released.
 *   **Error Handling:** More robust error pages and alerts.
 *   **Testing:** Unit and Integration tests for all services.
