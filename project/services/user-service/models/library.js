@@ -1,0 +1,134 @@
+const pool = require('../config/db');
+
+const createLibraryTable = async () => {
+  const queryLibrary = `
+    CREATE TABLE IF NOT EXISTS user_library (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      media_id VARCHAR(50) NOT NULL,
+      media_title VARCHAR(255),
+      media_type VARCHAR(50),
+      status VARCHAR(50) DEFAULT 'Plan to Watch',
+      progress VARCHAR(50),
+      rating INTEGER CHECK (rating >= 0 AND rating <= 10),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+  
+  const queryHistory = `
+    CREATE TABLE IF NOT EXISTS library_history (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      media_title VARCHAR(255),
+      action_type VARCHAR(50), -- ADDED, UPDATED, RATED
+      details TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  try {
+    await pool.query(queryLibrary);
+    await pool.query(queryHistory);
+    console.log("User Library and History tables created successfully");
+  } catch (err) {
+    console.error("Error creating tables", err);
+  }
+};
+
+const addHistory = async (userId, title, action, details) => {
+    try {
+        const query = `INSERT INTO library_history (user_id, media_title, action_type, details) VALUES ($1, $2, $3, $4)`;
+        await pool.query(query, [userId, title, action, details]);
+    } catch (err) {
+        console.error("Failed to log history:", err);
+    }
+};
+
+const addToLibrary = async (userId, mediaId, title, type, status) => {
+  const query = `
+    INSERT INTO user_library (user_id, media_id, media_title, media_type, status)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *;
+  `;
+  const values = [userId, mediaId, title, type, status || 'Plan to Watch'];
+  const res = await pool.query(query, values);
+  
+  await addHistory(userId, title, 'ADDED', `Added to library as ${status || 'Plan to Watch'}`);
+  
+  return res.rows[0];
+};
+
+const getUserLibrary = async (userId) => {
+  const query = 'SELECT * FROM user_library WHERE user_id = $1 ORDER BY created_at DESC';
+  const res = await pool.query(query, [userId]);
+  return res.rows;
+};
+
+const getHistory = async (userId) => {
+    const query = 'SELECT * FROM library_history WHERE user_id = $1 ORDER BY created_at DESC';
+    const res = await pool.query(query, [userId]);
+    return res.rows;
+};
+
+const getHistoryByTitle = async (userId, title) => {
+    const query = 'SELECT * FROM library_history WHERE user_id = $1 AND media_title = $2 ORDER BY created_at DESC';
+    const res = await pool.query(query, [userId, title]);
+    return res.rows;
+};
+
+const getItemById = async (id) => {
+    const res = await pool.query('SELECT * FROM user_library WHERE id = $1', [id]);
+    return res.rows[0];
+};
+
+const updateEntry = async (id, status, progress, rating) => {
+  // Fetch old state for comparison
+  const oldItem = await getItemById(id);
+  
+  const query = `
+    UPDATE user_library 
+    SET status = $1, progress = $2, rating = $3 
+    WHERE id = $4 
+    RETURNING *;
+  `;
+  const res = await pool.query(query, [status, progress, rating, id]);
+  const newItem = res.rows[0];
+
+  if (oldItem && newItem) {
+      const changes = [];
+      if (oldItem.status !== newItem.status) changes.push(`Status: ${oldItem.status} -> ${newItem.status}`);
+      if (oldItem.progress !== newItem.progress) changes.push(`Progress: ${oldItem.progress} -> ${newItem.progress}`);
+      if (oldItem.rating !== newItem.rating) changes.push(`Rating: ${oldItem.rating} -> ${newItem.rating}`);
+      
+      if (changes.length > 0) {
+          await addHistory(oldItem.user_id, oldItem.media_title, 'UPDATED', changes.join(', '));
+      }
+  }
+
+  return newItem;
+};
+
+const getStats = async (userId) => {
+  const query = `
+    SELECT 
+      COUNT(*) as total_items,
+      AVG(rating) as avg_rating,
+      media_type,
+      status
+    FROM user_library 
+    WHERE user_id = $1
+    GROUP BY media_type, status;
+  `;
+  const res = await pool.query(query, [userId]);
+  return res.rows;
+};
+
+module.exports = {
+  createLibraryTable,
+  addToLibrary,
+  getUserLibrary,
+  updateEntry,
+  getStats,
+  getHistory,
+  getHistoryByTitle
+};
