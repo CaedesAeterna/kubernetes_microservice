@@ -16,6 +16,7 @@ Contains the source code for the microservices.
     *   `models/`: Database interaction (`user.js`, `library.js`).
     *   `views/`: Bootstrap EJS templates.
     *   `config/`: Configuration (DB, Kafka).
+    *   `migrate_v2.js`: Database migration script (adds season/episode columns).
 *   **media-service/**: Python/FastAPI application.
     *   `app/main.py`: Entry point.
     *   `app/routers/`: `media.py` (CRUD + Search).

@@ -66,9 +66,9 @@ minikube service ingress-nginx-controller -n ingress-nginx --url
 *   **Ingress 404/503:** Verify Ingress resource `kubectl get ingress -n app` and check pod logs.
 
 ## 6. Architecture Status
-*   **User Service (v1.1.X):** Node.js + Postgres. Handles Auth, Library, Profile Stats, History, JSON API.
-*   **Media Service (v1.1.X):** Python + MongoDB + Redis. Handles Media Catalog, Search, Caching, JSON API.
-*   **Notification Service (v1.1.X):** Python + FastAPI (Consumer). Listens to `user-registered` events for email simulation.
+*   **User Service (v1.1.X):** Node.js + Postgres. Handles Auth, Library (with Season/Episode tracking), Profile Stats, History, JSON API.
+*   **Media Service (v1.1.X):** Python + MongoDB + Redis. Handles Media Catalog (with nested Seasons/Episodes), Search, Caching, JSON API.
+*   **Notification Service (v1.1.X):** Python + FastAPI (Consumer). Listens to `user-registered` events for email simulation (Pub/Sub Pattern).
 *   **Dashboard Service (v1.1.X):** Python + httpx. Aggregates data from other services, implements Circuit Breaker.
-*   **Messaging:** Kafka (Strimzi).
+*   **Messaging:** Kafka (Strimzi) - configured for Fan-out (Pub/Sub).
 *   **Persistent Storage:** PostgreSQL, MongoDB (Replica Set), Redis (for Caching).

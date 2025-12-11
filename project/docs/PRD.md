@@ -15,19 +15,18 @@ The application will follow a **microservice architecture** deployed on **Kubern
 
 ## 3. Functional Requirements
 
-### 3.1. Media Types Supported
-The system must support the following media types:
-*   **Series (TV/Anime):** Track by seasons and episodes.
-*   **Movies:** Track watched status, rating, and review.
-*   **Web Novels:** Track by chapter count.
-*   **Novels (Light Novels/E-books):** Track by volume and chapter.
-*   **Books (Physical/General):** Granular tracking options.
+### 3.1. Media Types Supported (Implemented)
+The system currently supports and tracks:
+*   **Series (TV/Anime):** Tracks by specific Seasons and Episodes numbers.
+*   **Movies:** Tracks watched status, rating, and review.
+*   **Web Novels:** Tracks by chapter count (via generic progress).
+*   **Novels (Light Novels/E-books):** Tracks by volume and chapter (via generic progress).
+*   **Books (Physical/General):** Tracks page number/chapter (via generic progress).
 
-### 3.2. Detailed Tracking for Books
-For the "Book" category, users must be able to track progress using multiple metrics:
-*   **Page Number:** Current page read vs. total pages.
-*   **Chapter:** Current chapter number or title.
-*   **Chapter Section:** For granular tracking within long chapters or study textbooks.
+### 3.2. Detailed Tracking for Books & Series (Partially Implemented)
+*   **Series/Anime:** Fully implemented structured tracking (Season X, Episode Y).
+*   **Books:** Currently supports free-text progress (e.g., "Page 50" or "Chapter 3").
+*   **Future Goal:** Granular page vs total page tracking for books.
 
 ### 3.3. User Library Management
 *   **Status:** Users can mark items as *Plan to Watch/Read*, *Watching/Reading*, *Completed*, *On Hold*, or *Dropped*.

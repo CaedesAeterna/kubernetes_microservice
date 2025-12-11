@@ -62,7 +62,7 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 ### 3.1 Containerization
 *   ✅ Dockerfiles created for all services.
 *   ✅ Images built and loaded into Minikube.
-*   ✅ Semantic Versioning implemented (Current: `1.1.11`).
+*   ✅ Semantic Versioning implemented (Current: `1.1.17`).
 
 ### 3.2 Kubernetes Deployment Manifests
 *   ✅ Deployments and Services created in `k8s/apps/`.
@@ -87,6 +87,19 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 8.  ✅ **Automation:** Deployment scripts created with smart version bumping and dynamic service detection.
 9.  ✅ **UI/UX:** Bootstrap 5 integration, client-side filtering.
 10. ✅ **Feature Expansion:** Added Search, Profile Stats, extended Media Types, History, Aggregator Service, Caching.
+
+## Phase 5: Advanced Tracking & Polish (✅ Done)
+
+1.  ✅ **Structured Tracking:** Updated Media Service to support `seasons` and `episodes` structure.
+2.  ✅ **Database Migration:** Updated User Service (Postgres) to track `current_season` and `current_episode`.
+3.  ✅ **UI Enhancements:**
+    *   Dynamic "Series Structure" builder in Media Service.
+    *   Smart Season/Episode inputs in User Library.
+    *   "Remove" button with confirmation for library items.
+4.  ✅ **Logic Improvements:**
+    *   Implemented Duplicate Check (Prevent adding same item twice).
+    *   Implemented Safe Delete (Removes from library, logs to history).
+    *   Fixed Authorization bugs.
 
 ## Next Steps / Future Work
 *   **Search Service:** Upgrade to Elasticsearch for fuzzy search.
