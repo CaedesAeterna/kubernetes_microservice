@@ -66,9 +66,9 @@ minikube service ingress-nginx-controller -n ingress-nginx --url
 *   **Ingress 404/503:** Verify Ingress resource `kubectl get ingress -n app` and check pod logs.
 
 ## 6. Architecture Status
-*   **User Service (v1.1.X):** Node.js + Postgres. Handles Auth, Library (with Season/Episode tracking), Profile Stats, History, JSON API.
-*   **Media Service (v1.1.X):** Python + MongoDB + Redis. Handles Media Catalog (with nested Seasons/Episodes), Search, Caching, JSON API.
-*   **Notification Service (v1.1.X):** Python + FastAPI (Consumer). Listens to `user-registered` events for email simulation (Pub/Sub Pattern).
-*   **Dashboard Service (v1.1.X):** Python + httpx. Aggregates data from other services, implements Circuit Breaker.
-*   **Messaging:** Kafka (Strimzi) - configured for Fan-out (Pub/Sub).
-*   **Persistent Storage:** PostgreSQL, MongoDB (Replica Set), Redis (for Caching).
+*   **User Service (v1.1.X):** Node.js + Postgres. Handles Auth, Library, Stats. Consumes `media-updates` and `media_deleted`. Produces `notification-dispatch`.
+*   **Media Service (v1.1.X):** Python + MongoDB + Redis. Handles Media Catalog. Produces `media-updates` (New Episode) and `media_deleted` (Global Delete).
+*   **Notification Service (v1.1.X):** Python + FastAPI. Consumes `notification-dispatch` for targeted user alerts.
+*   **Dashboard Service (v1.1.X):** Python + httpx + aiokafka. Aggregates data + Consumes `media-updates` for Real-Time Live Feed.
+*   **Messaging:** Kafka (Strimzi) - **Complex Flow:** Media -> User -> Notification.
+*   **Persistent Storage:** PostgreSQL, MongoDB, Redis.

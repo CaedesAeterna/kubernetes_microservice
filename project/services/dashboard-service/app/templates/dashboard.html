@@ -17,9 +17,10 @@
         <p>This is the Aggregator Service combining data from User and Media services.</p>
         
         <div class="row mt-4">
-            <div class="col-md-6">
+            <!-- User Stats -->
+            <div class="col-md-4">
                 <div class="card h-100">
-                    <div class="card-header bg-primary text-white">Your Stats (from User Service)</div>
+                    <div class="card-header bg-primary text-white">Your Stats (User Service)</div>
                     <div class="card-body">
                         {% if user_data and not user_data.error %}
                             <h3 class="card-title">Total Items: {{ user_data.total_items }}</h3>
@@ -40,9 +41,11 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            
+            <!-- Media Arrivals -->
+            <div class="col-md-4">
                 <div class="card h-100">
-                    <div class="card-header bg-success text-white">New Arrivals (from Media Service)</div>
+                    <div class="card-header bg-success text-white">New Arrivals (Media Service)</div>
                     <div class="card-body">
                         {% if media_data %}
                             <ul class="list-group list-group-flush">
@@ -55,6 +58,34 @@
                             </ul>
                         {% else %}
                             <p class="text-muted">No recent media or service unavailable.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Feed (New) -->
+            <div class="col-md-4">
+                <div class="card h-100 border-danger">
+                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                        <span>Live Feed (Kafka Pub/Sub)</span>
+                        <span class="badge bg-light text-danger">Real-time</span>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_events %}
+                            <ul class="list-group list-group-flush">
+                                {% for event in recent_events %}
+                                    <li class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ event.media_title }}</h6>
+                                            <small>S{{ event.season }} E{{ event.episode }}</small>
+                                        </div>
+                                        <small class="text-muted">"{{ event.episode_title }}"</small>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted text-center mt-3">Waiting for events...</p>
+                            <small class="d-block text-center text-muted">Trigger a release to see it here!</small>
                         {% endif %}
                     </div>
                 </div>

@@ -14,6 +14,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="/media">Browse</a></li>
                     <li class="nav-item"><a class="nav-link" href="/library">My Library</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link active" href="/profile">Hi, <%= username %></a></li>
@@ -24,6 +25,23 @@
     </nav>
 
     <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 class="card-title">@<%= username %></h2>
+                                <p class="text-muted mb-1"><%= user.email || 'No email set' %></p>
+                                <p><%= user.bio || 'No bio yet.' %></p>
+                            </div>
+                            <a href="/profile/edit" class="btn btn-outline-primary">Edit Profile</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <!-- User Info Card -->
             <div class="col-md-4 mb-4">

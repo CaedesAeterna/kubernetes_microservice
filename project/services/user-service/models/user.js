@@ -4,22 +4,27 @@ const createTable = async () => {
   const query = `
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
-      username VARCHAR(100) UNIQUE NOT NULL,
-      password VARCHAR(100) NOT NULL,
+      username VARCHAR(50) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      email VARCHAR(255),
+      bio TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
   try {
     await pool.query(query);
-    console.log("Users table created successfully");
+    // Migration for existing tables (Idempotent)
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);");
+    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;");
+    console.log("Users table checked/created successfully");
   } catch (err) {
     console.error("Error creating users table", err);
   }
 };
 
-const createUser = async (username, password) => {
-  const query = 'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *';
-  const values = [username, password];
+const createUser = async (username, password, email) => {
+  const query = 'INSERT INTO users (username, password, email) VALUES ($1, $2, $3) RETURNING *';
+  const values = [username, password, email || null];
   const res = await pool.query(query, values);
   return res.rows[0];
 };
@@ -30,8 +35,15 @@ const findUserByUsername = async (username) => {
   return res.rows[0];
 };
 
+const updateUser = async (username, email, bio) => {
+  const query = 'UPDATE users SET email = $1, bio = $2 WHERE username = $3 RETURNING *';
+  const res = await pool.query(query, [email, bio, username]);
+  return res.rows[0];
+};
+
 module.exports = {
   createTable,
   createUser,
   findUserByUsername,
+  updateUser
 };

@@ -8,8 +8,8 @@ const authRoutes = require('./routes/auth');
 const libraryRoutes = require('./routes/library');
 const profileRoutes = require('./routes/profile');
 const apiRoutes = require('./routes/api');
-
-dotenv.config();
+const requireAuth = require('./middleware/sessionAuth');
+const runConsumer = require('./kafka_consumer');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,6 +17,9 @@ const port = process.env.PORT || 3000;
 // Initialize DB
 userModel.createTable();
 libraryModel.createLibraryTable();
+
+// Start Kafka Consumer
+runConsumer().catch(console.error);
 
 // Middleware
 app.use(express.json());
@@ -35,13 +38,13 @@ app.set('views', path.join(__dirname, 'views'));
 // Routes
 // We mount at both specific paths (for local dev) and root (for Ingress stripping)
 app.use('/auth', authRoutes);
-app.use('/library', libraryRoutes);
-app.use('/profile', profileRoutes);
-app.use('/api', apiRoutes); // Internal API
+app.use('/library', requireAuth, libraryRoutes);
+app.use('/profile', requireAuth, profileRoutes);
+app.use('/api', requireAuth, apiRoutes); // Internal API
 app.use('/', authRoutes);
-app.use('/', libraryRoutes);
-app.use('/', profileRoutes);
-app.use('/', apiRoutes);
+app.use('/', requireAuth, libraryRoutes);
+app.use('/', requireAuth, profileRoutes);
+app.use('/', requireAuth, apiRoutes);
 
 app.get('/', (req, res) => {
   res.render('index', { title: 'Home' });

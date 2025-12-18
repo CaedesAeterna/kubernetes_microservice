@@ -13,6 +13,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link active" href="/media">Browse</a></li>
                     <li class="nav-item"><a class="nav-link" href="/library">My Library</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     {% if username %}
@@ -62,12 +63,29 @@
                     </div>
                     <div class="card-footer bg-white border-top-0">
                         {% if username %}
-                        <form action="/library/add" method="POST" class="d-grid">
-                            <input type="hidden" name="mediaId" value="{{ media.id }}">
-                            <input type="hidden" name="mediaTitle" value="{{ media.title }}">
-                            <input type="hidden" name="mediaType" value="{{ media.media_type }}">
-                            <button type="submit" class="btn btn-success">Add to Library</button>
-                        </form>
+                        <div class="d-grid gap-2">
+                            <!-- Add to Library (User Service) -->
+                            <form action="/library/add" method="POST">
+                                <input type="hidden" name="mediaId" value="{{ media.id }}">
+                                <input type="hidden" name="title" value="{{ media.title }}">
+                                <input type="hidden" name="mediaType" value="{{ media.media_type }}">
+                                <button type="submit" class="btn btn-primary w-100">Add to Library</button>
+                            </form>
+
+                            <hr class="my-1">
+
+                            <!-- Admin Actions -->
+                            <form action="/media/{{ media.id }}/release" method="POST" target="_blank" onsubmit="alert('Release triggered!');">
+                                <input type="hidden" name="season_number" value="1">
+                                <input type="hidden" name="episode_number" value="1">
+                                <input type="hidden" name="episode_title" value="Demo Release">
+                                <button type="submit" class="btn btn-sm btn-outline-success w-100">Simulate Release</button>
+                            </form>
+                            
+                            <form action="/media/{{ media.id }}/delete" method="POST" onsubmit="return confirm('Delete this media globally?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger w-100">Delete</button>
+                            </form>
+                        </div>
                         {% else %}
                         <div class="d-grid">
                             <a href="/auth/login" class="btn btn-outline-primary">Login to Add</a>

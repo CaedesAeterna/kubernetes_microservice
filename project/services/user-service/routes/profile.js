@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const userModel = require('../models/user');
 const libraryModel = require('../models/library');
+const userModel = require('../models/user');
 
 router.get('/', async (req, res) => {
   const username = req.cookies.username;
@@ -9,47 +9,75 @@ router.get('/', async (req, res) => {
 
   try {
     const user = await userModel.findUserByUsername(username);
-    if (!user) return res.redirect('/auth/login');
-
     const rawStats = await libraryModel.getStats(user.id);
+    const library = await libraryModel.getUserLibrary(user.id); // For recent activity
     
-    // Process stats for display
-    const stats = {
-        total: 0,
-        avgRating: 0,
-        byType: {},
-        byStatus: {}
-    };
-
+    let total = 0;
     let ratingSum = 0;
     let ratingCount = 0;
+    const byType = {};
+    const byStatus = {};
 
     rawStats.forEach(row => {
         const count = parseInt(row.total_items);
-        stats.total += count;
+        total += count;
         
-        // Type breakdown
-        if (!stats.byType[row.media_type]) stats.byType[row.media_type] = 0;
-        stats.byType[row.media_type] += count;
-
-        // Status breakdown
-        if (!stats.byStatus[row.status]) stats.byStatus[row.status] = 0;
-        stats.byStatus[row.status] += count;
-
-        // Avg Rating Calc
+        // Avg Rating logic (row.avg_rating is per group)
         if (row.avg_rating) {
-            ratingSum += (parseFloat(row.avg_rating) * count);
+            ratingSum += parseFloat(row.avg_rating) * count;
             ratingCount += count;
+        }
+
+        // By Type
+        if (row.media_type) {
+            byType[row.media_type] = (byType[row.media_type] || 0) + count;
+        }
+
+        // By Status
+        if (row.status) {
+            byStatus[row.status] = (byStatus[row.status] || 0) + count;
         }
     });
 
-    stats.avgRating = ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : "N/A";
+    const avgRating = ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : 0;
 
-    res.render('profile', { title: 'My Profile', user, stats, username });
+    res.render('profile', { 
+        title: 'My Profile', 
+        username, 
+        user,
+        stats: { total, avgRating, byType, byStatus },
+        recent: library.slice(0, 5) 
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("Server Error");
   }
+});
+
+router.get('/edit', async (req, res) => {
+    const username = req.cookies.username;
+    if (!username) return res.redirect('/auth/login');
+    
+    try {
+        const user = await userModel.findUserByUsername(username);
+        res.render('profile_edit', { title: 'Edit Profile', username, user });
+    } catch (err) {
+        console.error(err);
+        res.redirect('/profile');
+    }
+});
+
+router.post('/edit', async (req, res) => {
+    const username = req.cookies.username;
+    const { email, bio } = req.body;
+    
+    try {
+        await userModel.updateUser(username, email, bio);
+        res.redirect('/profile');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error updating profile");
+    }
 });
 
 module.exports = router;

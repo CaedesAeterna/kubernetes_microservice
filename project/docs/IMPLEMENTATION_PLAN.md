@@ -25,6 +25,9 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 *   ✅ **Tech:** Node.js, Express, EJS, PostgreSQL.
 *   ✅ **Features:**
     *   User Authentication (Login/Register/Logout).
+    *   **Session Management:** Implemented robust Redis-backed session management using `sessionAuth` middleware for scalable, multi-device authentication. This includes generation, storage (Redis), validation, and cookie handling.
+    *   **Kubernetes Environment Variable Handling:** Ensured correct precedence of Kubernetes-provided environment variables by removing `dotenv` override conflicts, crucial for Redis connectivity.
+    *   **Module Import Compatibility:** Addressed `ERR_REQUIRE_ESM` for `uuid` module with dynamic import.
     *   **User Library:** Track media, update status (Plan to Watch, etc.), progress, and rating.
     *   **User Profile:** Dashboard with consumption stats and breakdowns.
     *   **Activity History:** Global and item-level history tracking.
@@ -35,6 +38,8 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 ### 2.2 Media & Search Service (Python/FastAPI)
 *   ✅ **Tech:** Python, FastAPI, Jinja2, MongoDB, Redis (client).
 *   ✅ **Features:**
+    *   **Authentication:** Implemented robust session-based authentication for protected routes (create, update, delete media). This uses a `get_current_user` dependency to validate user sessions against the User Service's Redis store.
+    *   **Unauthorized Access Handling:** For unauthenticated HTML requests to protected routes, a user-friendly "Not Authorized" popup (HTML response) is displayed instead of a redirect or raw JSON error.
     *   CRUD for Media Items (Movies, Series, Anime, Manga, Novels, Books).
     *   **Search:** Regex-based title search (server-side and client-side filtering).
     *   **Caching:** Redis caching for media listings.
@@ -62,7 +67,7 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 ### 3.1 Containerization
 *   ✅ Dockerfiles created for all services.
 *   ✅ Images built and loaded into Minikube.
-*   ✅ Semantic Versioning implemented (Current: `1.1.17`).
+*   ✅ Semantic Versioning implemented (Current: `1.1.42`).
 
 ### 3.2 Kubernetes Deployment Manifests
 *   ✅ Deployments and Services created in `k8s/apps/`.
@@ -100,6 +105,39 @@ This plan outlines the steps to build and deploy the microservices-based Media T
     *   Implemented Duplicate Check (Prevent adding same item twice).
     *   Implemented Safe Delete (Removes from library, logs to history).
     *   Fixed Authorization bugs.
+
+## Phase 6: Advanced Event Driven Architecture (✅ Done)
+
+1.  ✅ **Pub/Sub Fan-Out:**
+    *   Implemented `media-updates` topic for "New Episode" releases.
+    *   Configured **Fan-Out** where one event triggers multiple services simultaneously.
+2.  ✅ **Complex Chains:**
+    *   **Chain:** Media Service (Producer) -> User Service (Consumer/Processor) -> Notification Service (Consumer).
+    *   User Service now acts as both Consumer and Producer (Intermediate Node).
+3.  ✅ **Dashboard Live Feed:**
+    *   Updated `dashboard-service` to consume `media-updates` directly using `aiokafka`.
+    *   Implemented in-memory "Live Feed" on the Dashboard UI.
+4.  ✅ **Notification Alerts:**
+    *   Expanded `notification-service` to handle targeted alerts (`notification-dispatch`).
+
+## Phase 7: Profile & Cleanup (✅ Done)
+
+1.  ✅ **Edit Profile:**
+    *   Updated `users` table schema (Email, Bio).
+    *   Implemented Profile Edit UI and Backend logic.
+2.  ✅ **Global Delete:**
+    *   Implemented `DELETE` flow in Media Service.
+    *   Added Kafka `media_deleted` event to clean up User Libraries automatically.
+3.  ✅ **Bug Fixes:**
+    *   Fixed "Empty Title" bug in Library.
+    *   Fixed `datetime` serialization error in Redis caching.
+    *   Fixed `ObjectId` error handling.
+
+## Phase 8: UX Refinements (✅ Done)
+
+1.  ✅ **Quick Increment:**
+    *   Added "+1" buttons to Library UI.
+    *   Implemented backend logic to auto-increment Seasons, Episodes, and Regex-match Chapters.
 
 ## Next Steps / Future Work
 *   **Search Service:** Upgrade to Elasticsearch for fuzzy search.

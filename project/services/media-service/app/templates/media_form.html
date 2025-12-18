@@ -37,19 +37,93 @@
                                     <option value="Series">TV Series</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <textarea name="description" class="form-control" rows="3"></textarea>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <a href="/media" class="btn btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-primary">Add to Catalog</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
             </div>
-        </div>
+            
+            <!-- Hidden Input to store the final JSON -->
+            <input type="hidden" id="seasons_json" name="seasons_json">
+
+            <div class="mb-3 p-3 border rounded bg-white" id="seasons-container" style="display:none;">
+                <label class="form-label fw-bold">Series Structure</label>
+                <div id="seasons-list">
+                    <!-- Season Rows will be added here -->
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success mt-2" onclick="addSeason()">+ Add Season</button>
+            </div>
+
+            <button type="submit" class="btn btn-primary" onclick="prepareJson()">Add Media</button>
+        </form>
     </div>
+
+    <script>
+        const typeSelect = document.getElementById('media_type');
+        const seasonsContainer = document.getElementById('seasons-container');
+        const seasonsList = document.getElementById('seasons-list');
+        const hiddenInput = document.getElementById('seasons_json');
+        
+        let seasonCount = 0;
+
+        function toggleSeasons() {
+            if (typeSelect.value === 'Series' || typeSelect.value === 'Anime') {
+                seasonsContainer.style.display = 'block';
+                if (seasonCount === 0) addSeason(); // Auto-add Season 1
+            } else {
+                seasonsContainer.style.display = 'none';
+            }
+        }
+
+        function addSeason() {
+            seasonCount++;
+            const div = document.createElement('div');
+            div.className = 'mb-2 p-2 border-bottom season-row';
+            div.dataset.season = seasonCount;
+            div.innerHTML = `
+                <div class="d-flex align-items-center mb-1">
+                    <span class="fw-bold me-2">Season ${seasonCount}</span>
+                    <input type="number" class="form-control form-control-sm me-2" placeholder="Episode Count" style="width: 150px;" id="s${seasonCount}_episodes">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSeason(this)">Remove</button>
+                </div>
+            `;
+            seasonsList.appendChild(div);
+        }
+
+        function removeSeason(btn) {
+            btn.closest('.season-row').remove();
+            // In a real app, we might re-number, but for MVP we'll just parse whatever exists.
+        }
+
+        function prepareJson() {
+            if (seasonsContainer.style.display === 'none') {
+                hiddenInput.value = "";
+                return;
+            }
+
+            const data = [];
+            const rows = document.querySelectorAll('.season-row');
+            
+            rows.forEach(row => {
+                const sNum = parseInt(row.dataset.season);
+                const epCount = parseInt(row.querySelector('input[type="number"]').value) || 0;
+                
+                // Generate episode objects
+                const episodes = [];
+                for (let i = 1; i <= epCount; i++) {
+                    episodes.push({ "episode_number": i, "title": "Episode " + i });
+                }
+
+                data.push({
+                    "season_number": sNum,
+                    "episodes": episodes
+                });
+            });
+
+            hiddenInput.value = JSON.stringify(data);
+        }
+
+        typeSelect.addEventListener('change', toggleSeasons);
+        toggleSeasons(); // Initial check
+    </script>
 </body>
 </html>

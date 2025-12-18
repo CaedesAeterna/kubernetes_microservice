@@ -13,6 +13,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="/media">Browse</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/library">My Library</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/profile">Hi, <%= username %></a></li>
@@ -44,6 +45,7 @@
                             <th>Rating</th>
                             <th>Update</th>
                             <th>History</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,7 +64,26 @@
                                         </select>
                                     </td>
                                     <td>
-                                        <input type="text" name="progress" value="<%= item.progress %>" class="form-control form-control-sm" placeholder="Ep 1 / Ch 5">
+                                        <% if (item.media_type === 'Series' || item.media_type === 'Anime') { %>
+                                            <div class="d-flex flex-column gap-1">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text" style="width: 35px;">S</span>
+                                                    <input type="number" name="season" value="<%= item.current_season || 0 %>" class="form-control">
+                                                    <button type="submit" name="action" value="inc_season" class="btn btn-success fw-bold" title="+1 Season">+</button>
+                                                </div>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text" style="width: 35px;">E</span>
+                                                    <input type="number" name="episode" value="<%= item.current_episode || 0 %>" class="form-control">
+                                                    <button type="submit" name="action" value="inc_episode" class="btn btn-success fw-bold" title="+1 Episode">+</button>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="progress" value="S<%= item.current_season %> E<%= item.current_episode %>">
+                                        <% } else { %>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" name="progress" value="<%= item.progress %>" class="form-control" placeholder="Page 1 / Ch 5">
+                                                <button type="submit" name="action" value="inc_progress" class="btn btn-success fw-bold" title="+1 Chapter/Page">+</button>
+                                            </div>
+                                        <% } %>
                                     </td>
                                     <td>
                                         <input type="number" name="rating" value="<%= item.rating %>" min="1" max="10" class="form-control form-control-sm" style="width: 70px;">
@@ -73,12 +94,17 @@
                                     <td>
                                         <a href="/library/history?title=<%= encodeURIComponent(item.media_title) %>" class="btn btn-sm btn-outline-secondary">Log</a>
                                     </td>
+                                    <td>
+                                        <button type="submit" formaction="/library/delete" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this item from your library?');" title="Remove">
+                                            &times;
+                                        </button>
+                                    </td>
                                 </form>
                             </tr>
                         <% }); %>
                         <% if (library.length === 0) { %>
                             <tr>
-                                <td colspan="7" class="text-center p-5">
+                                <td colspan="8" class="text-center p-5">
                                     <p class="text-muted">Your library is empty.</p>
                                     <a href="/media" class="btn btn-primary">Go Add Something!</a>
                                 </td>

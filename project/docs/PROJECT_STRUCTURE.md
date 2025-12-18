@@ -9,23 +9,37 @@ This document explains the organization of the codebase.
 Contains the source code for the microservices.
 *   **user-service/**: Node.js/Express application.
     *   `index.js`: Entry point (with debug logging).
+    *   `kafka_consumer.js`: Consumer for `media-updates` (New Episode logic).
     *   `routes/`: 
         *   `auth.js`: Login/Register/Logout.
         *   `library.js`: Library management.
         *   `profile.js`: Stats calculation and dashboard.
     *   `models/`: Database interaction (`user.js`, `library.js`).
     *   `views/`: Bootstrap EJS templates.
+        *   `history.ejs`: User activity history.
+        *   `index.ejs`: Landing page.
+        *   `library.ejs`: User's media library.
+        *   `login.ejs`: Login form.
+        *   `register.ejs`: Registration form.
+        *   `profile.ejs`: Dashboard stats.
+        *   `profile_edit.ejs`: Profile settings.
     *   `config/`: Configuration (DB, Kafka).
     *   `migrate_v2.js`: Database migration script (adds season/episode columns).
 *   **media-service/**: Python/FastAPI application.
     *   `app/main.py`: Entry point.
-    *   `app/routers/`: `media.py` (CRUD + Search).
+    *   `app/routers/`: `media.py` (CRUD + Search + Release/Delete Endpoints).
     *   `app/models.py`: Pydantic models.
     *   `app/database.py`: MongoDB connection.
+    *   `app/kafka_producer.py`: Producer utility for `media-updates`.
+    *   `app/auth.py`: Authentication dependency for session validation.
     *   `app/templates/`: Bootstrap Jinja2 templates.
 *   **notification-service/**: Python/FastAPI application.
     *   `app/main.py`: Entry point.
-    *   `app/kafka_consumer.py`: Consumer for `user-registered` events (simulates email).
+    *   `app/kafka_consumer.py`: Consumer for `user-registered` and `notification-dispatch`.
+    *   `Dockerfile`: Container definition.
+*   **dashboard-service/**: Python/FastAPI application.
+    *   `app/main.py`: Entry point (Aggregator + Kafka Consumer for Live Feed).
+    *   `app/templates/`: Bootstrap Jinja2 templates (`dashboard.html`).
     *   `Dockerfile`: Container definition.
 
 ## /k8s

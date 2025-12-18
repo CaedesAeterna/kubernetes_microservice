@@ -1,14 +1,84 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, BackgroundTasks, Depends
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from app.database import db, redis_client
-from app.models import MediaItemCreate
+from app.models import MediaItem
+from app.kafka_producer import get_producer
+from app.auth import get_current_user
 from bson import ObjectId
 from typing import Optional
 import json
+from datetime import datetime
+from bson.errors import InvalidId
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+MEDIA_CACHE_KEY = "media_list:all"
+
+@router.post("/media/{media_id}/release")
+async def release_episode(
+    media_id: str,
+    season_number: int = Form(...),
+    episode_number: int = Form(...),
+    episode_title: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    # 1. Update DB (Simplified: Just pushing to a 'releases' log or updating generic fields for now)
+    # Ideally we navigate the nested seasons array, but for this demo, we'll assume we just want to trigger the event.
+    try:
+        oid = ObjectId(media_id)
+    except InvalidId:
+        return HTMLResponse(f"Invalid Media ID format: '{media_id}'. Must be a 24-character hex string.", status_code=400)
+
+    # We will just verify it exists.
+    media = await db.media.find_one({"_id": oid})
+    if not media:
+        return HTMLResponse("Media not found", status_code=404)
+
+    # In a real app, we would update the specific season/episode in the document here.
+    # For now, we rely on the event.
+    
+    # 2. Publish Kafka Event
+    producer = await get_producer()
+    event = {
+        "event_type": "new_episode",
+        "media_id": media_id,
+        "media_title": media["title"],
+        "season": season_number,
+        "episode": episode_number,
+        "episode_title": episode_title
+    }
+    await producer.send_and_wait("media-updates", event)
+    
+    # Invalidate Cache
+    await redis_client.delete(MEDIA_CACHE_KEY)
+    
+    return RedirectResponse(url=f"/media", status_code=303)
+
+@router.post("/media/{media_id}/delete")
+async def delete_media(media_id: str, current_user: dict = Depends(get_current_user)):
+    try:
+        oid = ObjectId(media_id)
+    except InvalidId:
+        return HTMLResponse(f"Invalid Media ID", status_code=400)
+
+    result = await db.media.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        return HTMLResponse("Media not found", status_code=404)
+
+    # Publish Event
+    producer = await get_producer()
+    event = {
+        "event_type": "media_deleted",
+        "media_id": media_id
+    }
+    await producer.send_and_wait("media-updates", event)
+    
+    # Invalidate Cache
+    await redis_client.delete(MEDIA_CACHE_KEY)
+
+    return RedirectResponse(url="/media", status_code=303)
 
 @router.get("/api/recent")
 async def get_recent_media():
@@ -18,6 +88,9 @@ async def get_recent_media():
     async for document in cursor:
         document["id"] = str(document["_id"])
         del document["_id"]
+        # Convert datetime to string for JSON serialization
+        if "created_at" in document and isinstance(document["created_at"], datetime):
+            document["created_at"] = document["created_at"].isoformat()
         media_list.append(document)
     return media_list
 
@@ -47,6 +120,9 @@ async def list_media(request: Request, q: Optional[str] = None):
         async for document in cursor:
             document["id"] = str(document["_id"])
             del document["_id"] # Remove ObjectId for JSON serialization
+            # Convert datetime to string for JSON serialization
+            if "created_at" in document and isinstance(document["created_at"], datetime):
+                document["created_at"] = document["created_at"].isoformat()
             media_list.append(document)
             
         # 4. Save to Cache (Expire in 60 seconds)
@@ -59,19 +135,36 @@ async def list_media(request: Request, q: Optional[str] = None):
         "search_query": q
     })
 
-@router.post("/media")
-async def create_media(title: str = Form(...), media_type: str = Form(...), description: str = Form(...)):
-    new_media = {"title": title, "media_type": media_type, "description": description}
-    await db.media.insert_one(new_media)
-    
-    # 5. Invalidate Cache on Write
-    # We clear the 'all' list and any potential searches (simple invalidation)
-    # A robust system might use specific keys or tags.
-    print("[Cache Invalidate] Clearing media_list:all")
-    await redis_client.delete("media_list:all")
-    
-    return RedirectResponse(url="/media", status_code=303)
+@router.post("/media", response_class=HTMLResponse)
+async def create_media(
+    request: Request,
+    title: str = Form(...),
+    media_type: str = Form(...),
+    description: Optional[str] = Form(None),
+    seasons_json: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        seasons_data = []
+        if seasons_json and seasons_json.strip():
+            import json
+            seasons_data = json.loads(seasons_json)
+        
+        media_item = MediaItem(
+            title=title, 
+            media_type=media_type, 
+            description=description,
+            seasons=seasons_data
+        )
+        await db.media.insert_one(media_item.dict())
+        
+        # Invalidate Cache
+        redis_client.delete(MEDIA_CACHE_KEY)
+        
+        return RedirectResponse(url="/media", status_code=303)
+    except Exception as e:
+        return templates.TemplateResponse("media_form.html", {"request": request, "error": str(e)})
 
 @router.get("/media/new")
-async def new_media_form(request: Request):
+async def new_media_form(request: Request, current_user: dict = Depends(get_current_user)):
     return templates.TemplateResponse("media_form.html", {"request": request})

@@ -23,28 +23,40 @@ The system currently supports and tracks:
 *   **Novels (Light Novels/E-books):** Tracks by volume and chapter (via generic progress).
 *   **Books (Physical/General):** Tracks page number/chapter (via generic progress).
 
-### 3.2. Detailed Tracking for Books & Series (Partially Implemented)
+### 3.2. Detailed Tracking for Books & Series (Implemented)
 *   **Series/Anime:** Fully implemented structured tracking (Season X, Episode Y).
 *   **Books:** Currently supports free-text progress (e.g., "Page 50" or "Chapter 3").
 *   **Future Goal:** Granular page vs total page tracking for books.
 
-### 3.3. User Library Management
+### 3.3. User Library Management (Implemented)
 *   **Status:** Users can mark items as *Plan to Watch/Read*, *Watching/Reading*, *Completed*, *On Hold*, or *Dropped*.
 *   **Rating & Reviews:** Users can rate (1-10 or 5 stars) and review items.
 *   **Favorites:** Mark specific items as favorites.
+*   **Removal:** Users can remove items from their library (logically deleted/archived in history).
+*   **Profile Management:** Users can edit their profile (Email, Bio).
+*   **Quick Progress:** "+1" buttons for easy progress tracking (Seasons, Episodes, Chapters).
 
-### 3.4. Search & Discovery
+### 3.4. Search & Discovery (Implemented)
 *   Search for media by title, author/director, genre, or tags.
 *   Filter by media type and status.
+*   **Global Delete:** Admin/Users can delete media items from the catalog, which automatically cleans up all user libraries.
 
-## 4. Technical Stack (Proposed)
+### 3.5. Notifications (Implemented)
+*   **Welcome Email:** Simulated email notification upon user registration via Kafka.
+*   **New Episode Alert:** Targeted alerts to users watching a specific series when a new episode is released.
+
+### 3.6. Dashboard (Implemented)
+*   **Live Feed:** Real-time list of newly released media episodes, updated via Kafka events (`media-updates`).
+*   **Aggregated Stats:** View combined statistics from User and Media services.
+
+## 4. Technical Stack (Implemented)
 *   **Container Orchestration:** Kubernetes (DigitalOcean K8s).
 *   **API Gateway / Ingress:** NGINX.
-*   **Databases:** PostgreSQL (for relational data like users/auth) and MongoDB (for flexible media metadata).
-*   **Message Broker:** Kafka.
+*   **Databases:** PostgreSQL (User/Auth) and MongoDB (Media Metadata).
+*   **Message Broker:** Kafka (Strimzi).
 *   **Backend:**
-    *   Python (FastAPI).
-    *   Node.js (Express).
+    *   Python (FastAPI) - Media, Notification, Dashboard Services.
+    *   Node.js (Express) - User Service.
 *   **Frontend:** Server-Side Rendering (SSR) using:
     *   **Jinja2** (for Python/FastAPI services).
     *   **EJS** (for Node.js/Express services).

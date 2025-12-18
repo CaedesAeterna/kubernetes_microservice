@@ -9,12 +9,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("notification-service")
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "my-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092")
-TOPIC = "user-registered"
+TOPICS = ["user-registered", "notification-dispatch"]
 
 async def consume():
-    logger.info(f"Starting Kafka Consumer on topic: {TOPIC}, Broker: {KAFKA_BROKER}")
+    logger.info(f"Starting Kafka Consumer on topics: {TOPICS}, Broker: {KAFKA_BROKER}")
     consumer = AIOKafkaConsumer(
-        TOPIC,
+        *TOPICS,
         bootstrap_servers=KAFKA_BROKER,
         group_id="notification-service-group" # Distinct group ID for fan-out
     )
@@ -25,16 +25,26 @@ async def consume():
             async for msg in consumer:
                 try:
                     data = json.loads(msg.value.decode('utf-8'))
-                    username = data.get("username", "Unknown")
-                    email = data.get("email", "unknown@example.com") # Assuming email might be in payload or we just simulate it
                     
-                    # Simulate sending an email
-                    logger.info("----------------------------------------------------------------")
-                    logger.info(f"📨 NOTIFICATION SERVICE: Sending Welcome Email to {username} ({email})")
-                    logger.info("   Subject: Welcome to Media Tracker!")
-                    logger.info("   Body: Hi there! Thanks for joining. Start tracking your media now.")
-                    logger.info("----------------------------------------------------------------")
-                    
+                    if msg.topic == "user-registered":
+                        username = data.get("username", "Unknown")
+                        email = data.get("email", "unknown@example.com")
+                        
+                        logger.info("----------------------------------------------------------------")
+                        logger.info(f"📨 NOTIFICATION SERVICE: Sending Welcome Email to {username} ({email})")
+                        logger.info("   Subject: Welcome to Media Tracker!")
+                        logger.info("   Body: Hi there! Thanks for joining. Start tracking your media now.")
+                        logger.info("----------------------------------------------------------------")
+                        
+                    elif msg.topic == "notification-dispatch":
+                        user_id = data.get("user_id", "Unknown")
+                        message_body = data.get("message", "No message content")
+                        
+                        logger.info("----------------------------------------------------------------")
+                        logger.info(f"🔔 NOTIFICATION SERVICE: Alert for User ID {user_id}")
+                        logger.info(f"   Message: {message_body}")
+                        logger.info("----------------------------------------------------------------")
+
                 except json.JSONDecodeError:
                     logger.error(f"Failed to decode message: {msg.value}")
                 except Exception as e:

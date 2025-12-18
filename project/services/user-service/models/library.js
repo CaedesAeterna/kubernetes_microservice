@@ -10,6 +10,8 @@ const createLibraryTable = async () => {
       media_type VARCHAR(50),
       status VARCHAR(50) DEFAULT 'Plan to Watch',
       progress VARCHAR(50),
+      current_season INTEGER DEFAULT 0,
+      current_episode INTEGER DEFAULT 0,
       rating INTEGER CHECK (rating >= 0 AND rating <= 10),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -45,6 +47,14 @@ const addHistory = async (userId, title, action, details) => {
 };
 
 const addToLibrary = async (userId, mediaId, title, type, status) => {
+  // Check if item already exists
+  const checkQuery = 'SELECT id FROM user_library WHERE user_id = $1 AND media_id = $2';
+  const checkRes = await pool.query(checkQuery, [userId, mediaId]);
+  
+  if (checkRes.rows.length > 0) {
+    throw new Error('Item already in library');
+  }
+
   const query = `
     INSERT INTO user_library (user_id, media_id, media_title, media_type, status)
     VALUES ($1, $2, $3, $4, $5)
@@ -81,17 +91,17 @@ const getItemById = async (id) => {
     return res.rows[0];
 };
 
-const updateEntry = async (id, status, progress, rating) => {
+const updateEntry = async (id, status, progress, rating, season, episode) => {
   // Fetch old state for comparison
   const oldItem = await getItemById(id);
   
   const query = `
     UPDATE user_library 
-    SET status = $1, progress = $2, rating = $3 
-    WHERE id = $4 
+    SET status = $1, progress = $2, rating = $3, current_season = $4, current_episode = $5
+    WHERE id = $6 
     RETURNING *;
   `;
-  const res = await pool.query(query, [status, progress, rating, id]);
+  const res = await pool.query(query, [status, progress, rating, season || 0, episode || 0, id]);
   const newItem = res.rows[0];
 
   if (oldItem && newItem) {
@@ -99,6 +109,8 @@ const updateEntry = async (id, status, progress, rating) => {
       if (oldItem.status !== newItem.status) changes.push(`Status: ${oldItem.status} -> ${newItem.status}`);
       if (oldItem.progress !== newItem.progress) changes.push(`Progress: ${oldItem.progress} -> ${newItem.progress}`);
       if (oldItem.rating !== newItem.rating) changes.push(`Rating: ${oldItem.rating} -> ${newItem.rating}`);
+      if (oldItem.current_season !== newItem.current_season) changes.push(`Season: ${oldItem.current_season} -> ${newItem.current_season}`);
+      if (oldItem.current_episode !== newItem.current_episode) changes.push(`Episode: ${oldItem.current_episode} -> ${newItem.current_episode}`);
       
       if (changes.length > 0) {
           await addHistory(oldItem.user_id, oldItem.media_title, 'UPDATED', changes.join(', '));
@@ -106,6 +118,19 @@ const updateEntry = async (id, status, progress, rating) => {
   }
 
   return newItem;
+};
+
+const deleteFromLibrary = async (id, userId) => {
+    // Check if the item belongs to the user
+    const item = await getItemById(id);
+    if (!item || item.user_id !== userId) {
+        throw new Error("Item not found or unauthorized");
+    }
+
+    const query = 'DELETE FROM user_library WHERE id = $1';
+    await pool.query(query, [id]);
+    
+    await addHistory(userId, item.media_title, 'REMOVED', `Removed from library`);
 };
 
 const getStats = async (userId) => {
@@ -128,6 +153,7 @@ module.exports = {
   addToLibrary,
   getUserLibrary,
   updateEntry,
+  deleteFromLibrary,
   getStats,
   getHistory,
   getHistoryByTitle
