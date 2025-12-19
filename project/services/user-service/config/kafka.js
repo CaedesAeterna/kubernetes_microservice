@@ -8,11 +8,16 @@ const kafka = new Kafka({
 const producer = kafka.producer();
 
 const connectProducer = async () => {
-  try {
-    await producer.connect();
-    console.log('Kafka Producer connected');
-  } catch (err) {
-    console.error('Error connecting Kafka Producer', err);
+  let connected = false;
+  while (!connected) {
+    try {
+      await producer.connect();
+      console.log('Kafka Producer connected');
+      connected = true;
+    } catch (err) {
+      console.error('Error connecting Kafka Producer. Retrying in 5s...', err.message);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
 };
 

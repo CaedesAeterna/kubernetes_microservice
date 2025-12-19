@@ -26,19 +26,28 @@ async def consume_events():
         group_id="dashboard-service-group", # Distinct group for fan-out
         auto_offset_reset="latest" # Only care about new stuff for live feed
     )
+    
+    # Retry Loop for Connection
+    while True:
+        try:
+            await consumer.start()
+            print("Dashboard Kafka Consumer Started")
+            break
+        except Exception as e:
+            print(f"[Dashboard] Kafka Connection Failed: {e}. Retrying in 5 seconds...")
+            await asyncio.sleep(5)
+
     try:
-        await consumer.start()
-        print("Dashboard Kafka Consumer Started")
         async for msg in consumer:
             try:
                 data = json.loads(msg.value.decode('utf-8'))
-                if data.get("event_type") == "new_episode":
+                if data.get("event_type") in ["new_episode", "new_release"]:
                     print(f"[Dashboard] Received Event: {data}")
                     recent_events.appendleft(data) # Add to top
             except Exception as e:
                 print(f"[Dashboard] Error processing message: {e}")
     except Exception as e:
-        print(f"[Dashboard] Kafka Connection Failed: {e}")
+        print(f"[Dashboard] Kafka Consumer Loop Failed: {e}")
     finally:
         await consumer.stop()
 
@@ -61,11 +70,17 @@ async def dashboard(request: Request):
         
         # 1. Call User Service (JSON API)
         try:
-            user_resp = await client.get(f"{USER_SERVICE_URL}/api/data?username={username}", timeout=2.0)
+            user_resp = await client.get(f"{USER_SERVICE_URL}/api/data?username={username}", timeout=5.0)
             if user_resp.status_code == 200:
                 user_data = user_resp.json()
+            else:
+                print(f"[Dashboard] User Service returned {user_resp.status_code}: {user_resp.text}")
+                user_data = {"error": f"Service returned {user_resp.status_code}"}
+        except httpx.RequestError as e:
+            print(f"[Dashboard] User Service Network Error: {e}")
+            user_data = {"error": "User Service unreachable (Network)"}
         except Exception as e:
-            print(f"[Dashboard] User Service Unreachable: {e}")
+            print(f"[Dashboard] User Service Error: {e}")
             user_data = {"error": "User Service unavailable"}
 
         # 2. Call Media Service (JSON API)

@@ -77,9 +77,19 @@
                                     <li class="list-group-item">
                                         <div class="d-flex w-100 justify-content-between">
                                             <h6 class="mb-1">{{ event.media_title }}</h6>
-                                            <small>S{{ event.season }} E{{ event.episode }}</small>
+                                            <small class="text-muted">
+                                                {% if event.season and event.episode %}
+                                                    S{{ event.season }} E{{ event.episode }}
+                                                {% elif event.volume and event.chapter %}
+                                                    Vol {{ event.volume }} Ch {{ event.chapter }}
+                                                {% elif event.chapter %}
+                                                    Ch {{ event.chapter }}
+                                                {% else %}
+                                                    {{ event.media_type }} Release
+                                                {% endif %}
+                                            </small>
                                         </div>
-                                        <small class="text-muted">"{{ event.episode_title }}"</small>
+                                        <small class="text-muted">"{{ event.release_title or event.episode_title }}"</small>
                                     </li>
                                 {% endfor %}
                             </ul>

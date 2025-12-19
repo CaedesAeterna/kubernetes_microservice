@@ -30,11 +30,12 @@ The system currently supports and tracks:
 
 ### 3.3. User Library Management (Implemented)
 *   **Status:** Users can mark items as *Plan to Watch/Read*, *Watching/Reading*, *Completed*, *On Hold*, or *Dropped*.
-*   **Rating & Reviews:** Users can rate (1-10 or 5 stars) and review items.
+*   **Rating & Reviews:** Users can rate items using a **1-10 Dropdown**.
 *   **Favorites:** Mark specific items as favorites.
-*   **Removal:** Users can remove items from their library (logically deleted/archived in history).
+*   **Removal:** Users can remove items from their library via a minimal "X" button (logically deleted/archived in history).
 *   **Profile Management:** Users can edit their profile (Email, Bio).
 *   **Quick Progress:** "+1" buttons for easy progress tracking (Seasons, Episodes, Chapters).
+*   **Duplicate Prevention:** System prevents adding the same item twice, redirecting users to their existing entry.
 
 ### 3.4. Search & Discovery (Implemented)
 *   Search for media by title, author/director, genre, or tags.
@@ -42,11 +43,14 @@ The system currently supports and tracks:
 *   **Global Delete:** Admin/Users can delete media items from the catalog, which automatically cleans up all user libraries.
 
 ### 3.5. Notifications (Implemented)
-*   **Welcome Email:** Simulated email notification upon user registration via Kafka.
-*   **New Episode Alert:** Targeted alerts to users watching a specific series when a new episode is released.
+*   **Welcome Email:** Simulated email notification upon user registration via Kafka (`user-registered`).
+*   **New Content Alert:** Targeted alerts (`notification-dispatch`) to users watching/reading a specific item when a new release occurs.
+    *   **Series/Anime:** Notifies about new Seasons/Episodes.
+    *   **Books/Manga:** Notifies about new Volumes/Chapters.
+    *   **Movies:** Notifies about theatrical/digital releases.
 
 ### 3.6. Dashboard (Implemented)
-*   **Live Feed:** Real-time list of newly released media episodes, updated via Kafka events (`media-updates`).
+*   **Live Feed:** Real-time list of newly released media content (Episodes, Chapters, etc.), updated via Kafka events (`media-updates`).
 *   **Aggregated Stats:** View combined statistics from User and Media services.
 
 ## 4. Technical Stack (Implemented)

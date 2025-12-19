@@ -96,15 +96,15 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 ## Phase 5: Advanced Tracking & Polish (✅ Done)
 
 1.  ✅ **Structured Tracking:** Updated Media Service to support `seasons` and `episodes` structure.
-2.  ✅ **Database Migration:** Updated User Service (Postgres) to track `current_season` and `current_episode`.
+2.  ✅ **Database Migration:** Updated User Service (Postgres) to track `current_season` and `current_episode` (v1.1.12).
 3.  ✅ **UI Enhancements:**
-    *   Dynamic "Series Structure" builder in Media Service.
-    *   Smart Season/Episode inputs in User Library.
-    *   "Remove" button with confirmation for library items.
+    *   **Media Service:** Implemented "Friendly Series Builder" UI for easy addition of nested seasons/episodes (v1.1.13).
+    *   **User Service:** Smart Season/Episode inputs in User Library.
+    *   **User Service:** "Remove" button evolution -> From text -> To column -> To minimal "X" button (v1.1.17).
 4.  ✅ **Logic Improvements:**
-    *   Implemented Duplicate Check (Prevent adding same item twice).
+    *   Implemented Duplicate Check (Prevent adding same item twice - redirects to library).
     *   Implemented Safe Delete (Removes from library, logs to history).
-    *   Fixed Authorization bugs.
+    *   Fixed Authorization bugs (Cookie check fallback).
 
 ## Phase 6: Advanced Event Driven Architecture (✅ Done)
 
@@ -136,11 +136,26 @@ This plan outlines the steps to build and deploy the microservices-based Media T
 ## Phase 8: UX Refinements (✅ Done)
 
 1.  ✅ **Quick Increment:**
-    *   Added "+1" buttons to Library UI.
+    *   Added "+1" buttons to User Library UI for quick progress updates.
     *   Implemented backend logic to auto-increment Seasons, Episodes, and Regex-match Chapters.
+3.  ✅ **Generic Event System:**
+    *   Refactored `media-updates` Kafka topic to support generic "New Release" events.
+    *   Updated Media Service to trigger releases for Movies (Premiere), Books (Volumes/Chapters), and Series (Seasons/Episodes).
+    *   Updated User Service and Dashboard Service to consume and display these varied formats correctly.
+## Phase 9: Stability & UX Polish (✅ Done)
+
+1.  ✅ **Resilience:**
+    *   Implemented robust **Kafka Connection Retry** logic (Exponential Backoff) in all services to handle startup race conditions (e.g., after laptop restart).
+    *   Enhanced Dashboard error logging and timeouts.
+2.  ✅ **UX Improvements:**
+    *   Replaced text-based Rating input with a user-friendly **Dropdown (1-10)** in My Library.
+    *   Fixed "Simulate Release" behavior to refresh the current page instead of opening new tabs.
+3.  ✅ **Bug Fixes:**
+    *   **Dashboard Stats:** Fixed "Service returned 302" error by removing authentication middleware from internal `/api` routes.
+    *   **Cache Invalidation:** Fixed a bug where new media didn't appear immediately by correctly awaiting the Redis delete command.
 
 ## Next Steps / Future Work
-*   **Search Service:** Upgrade to Elasticsearch for fuzzy search.
+
 *   **Recommendation Engine:** Suggest media based on user history (Python/Redis).
 *   **Advanced Notifications:** Email users when new episodes of tracked series are released.
 *   **Error Handling:** More robust error pages and alerts.

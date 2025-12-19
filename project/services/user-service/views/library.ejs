@@ -86,7 +86,12 @@
                                         <% } %>
                                     </td>
                                     <td>
-                                        <input type="number" name="rating" value="<%= item.rating %>" min="1" max="10" class="form-control form-control-sm" style="width: 70px;">
+                                        <select name="rating" class="form-select form-select-sm" style="width: 70px;">
+                                            <option value="0" <%= !item.rating ? 'selected' : '' %>>-</option>
+                                            <% for(let i=1; i<=10; i++) { %>
+                                                <option value="<%= i %>" <%= item.rating == i ? 'selected' : '' %>><%= i %></option>
+                                            <% } %>
+                                        </select>
                                     </td>
                                     <td>
                                         <button type="submit" class="btn btn-sm btn-primary">Save</button>

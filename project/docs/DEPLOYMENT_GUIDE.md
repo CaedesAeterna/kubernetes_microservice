@@ -66,9 +66,16 @@ minikube service ingress-nginx-controller -n ingress-nginx --url
 *   **Ingress 404/503:** Verify Ingress resource `kubectl get ingress -n app` and check pod logs.
 
 ## 6. Architecture Status
-*   **User Service (v1.1.X):** Node.js + Postgres. Handles Auth, Library, Stats. Consumes `media-updates` and `media_deleted`. Produces `notification-dispatch`.
-*   **Media Service (v1.1.X):** Python + MongoDB + Redis. Handles Media Catalog. Produces `media-updates` (New Episode) and `media_deleted` (Global Delete).
-*   **Notification Service (v1.1.X):** Python + FastAPI. Consumes `notification-dispatch` for targeted user alerts.
-*   **Dashboard Service (v1.1.X):** Python + httpx + aiokafka. Aggregates data + Consumes `media-updates` for Real-Time Live Feed.
+*   **User Service (v1.1.48+):** Node.js + Postgres. Handles Auth, Library, Stats.
+    *   *Features:* Duplicate entry prevention, "Quick Increment" buttons, Minimal "X" delete button, History logging, **Rating Dropdown (1-10)**.
+    *   *API:* Internal `/api/data` endpoint open for Dashboard Aggregation (Auth bypassed).
+    *   *Events:* Consumes `media-updates` and `media_deleted`. Produces `notification-dispatch`.
+*   **Media Service (v1.1.13+):** Python + MongoDB + Redis. Handles Media Catalog.
+    *   *Features:* Nested Season/Episode structure, Friendly "Series Builder" UI, Global Delete, **Generic Release Support** (Episodes, Chapters, Volumes).
+    *   *Events:* Produces `media-updates` (New Release) and `media_deleted` (Global Delete).
+*   **Notification Service (v1.1.X):** Python + FastAPI.
+    *   *Events:* Consumes `notification-dispatch` for targeted user alerts and `user-registered` for welcome emails.
+*   **Dashboard Service (v1.1.X):** Python + httpx + aiokafka.
+    *   *Features:* Real-Time "Live Feed" (Pub/Sub Fan-Out from `media-updates`).
 *   **Messaging:** Kafka (Strimzi) - **Complex Flow:** Media -> User -> Notification.
 *   **Persistent Storage:** PostgreSQL, MongoDB, Redis.

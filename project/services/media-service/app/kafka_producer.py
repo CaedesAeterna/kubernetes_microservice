@@ -14,7 +14,15 @@ async def get_producer():
             bootstrap_servers=KAFKA_BROKER,
             value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
-        await producer.start()
+        # Retry Loop for Connection
+        while True:
+            try:
+                await producer.start()
+                break
+            except Exception as e:
+                print(f"Kafka Producer connection failed: {e}. Retrying in 5 seconds...")
+                await asyncio.sleep(5)
+                
     return producer
 
 async def close_producer():

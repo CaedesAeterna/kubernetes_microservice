@@ -29,15 +29,28 @@ graph TD
 *   **Consumer B:** `notification-service` (Sends welcome email).
 *   **Pattern:** Simple Fan-Out.
 
-### Topic 2: `media-updates` (The "New Episode" Flow)
+### Topic 2: `media-updates` (The "New Content" Flow)
 *   **Producer:** `media-service`
     *   **Trigger:** `POST /media/{id}/release` (Admin/System action).
-    *   **Payload:** `{ event_type: "new_episode", media_id: "...", title: "..." }`
+    *   **Payload:** 
+        ```json
+        { 
+          "event_type": "new_release", 
+          "media_id": "...", 
+          "media_title": "...", 
+          "media_type": "Series|Book|...",
+          "release_title": "...",
+          "season": 2,      // Optional (Series)
+          "episode": 5,     // Optional (Series)
+          "volume": 1,      // Optional (Book/Manga)
+          "chapter": 12     // Optional (Book/Manga)
+        }
+        ```
 *   **Consumer A:** `dashboard-service`
-    *   **Action:** Updates the in-memory "Live Feed" list.
+    *   **Action:** Updates the in-memory "Live Feed" list, displaying relevant details (e.g., "Vol 1 Ch 12" or "S2 E5").
     *   **Result:** All users see the new release on the Dashboard immediately.
 *   **Consumer B:** `user-service`
-    *   **Action:** Queries DB for users who have this item in "Watching" status.
+    *   **Action:** Queries DB for users who have this item in "Watching" or "Reading" status.
     *   **Result:** If users are found, triggers Topic 3.
 *   **Pattern:** Fan-Out (Two distinct services reacting to one event).
 

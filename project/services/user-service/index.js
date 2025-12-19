@@ -15,8 +15,15 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Initialize DB
-userModel.createTable();
-libraryModel.createLibraryTable();
+(async () => {
+  try {
+    await userModel.createTable();
+    await libraryModel.createLibraryTable();
+    console.log("Database initialized successfully");
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
+  }
+})();
 
 // Start Kafka Consumer
 runConsumer().catch(console.error);
@@ -40,11 +47,11 @@ app.set('views', path.join(__dirname, 'views'));
 app.use('/auth', authRoutes);
 app.use('/library', requireAuth, libraryRoutes);
 app.use('/profile', requireAuth, profileRoutes);
-app.use('/api', requireAuth, apiRoutes); // Internal API
+app.use('/api', apiRoutes); // Internal API (Open for Dashboard Service)
 app.use('/', authRoutes);
 app.use('/', requireAuth, libraryRoutes);
 app.use('/', requireAuth, profileRoutes);
-app.use('/', requireAuth, apiRoutes);
+app.use('/', apiRoutes);
 
 app.get('/', (req, res) => {
   res.render('index', { title: 'Home' });

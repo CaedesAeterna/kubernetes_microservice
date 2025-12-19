@@ -17,37 +17,36 @@ templates = Jinja2Templates(directory="app/templates")
 MEDIA_CACHE_KEY = "media_list:all"
 
 @router.post("/media/{media_id}/release")
-async def release_episode(
+async def release_content(
     media_id: str,
-    season_number: int = Form(...),
-    episode_number: int = Form(...),
-    episode_title: str = Form(...),
+    release_title: str = Form(...),
+    season_number: Optional[int] = Form(None),
+    episode_number: Optional[int] = Form(None),
+    volume_number: Optional[int] = Form(None),
+    chapter_number: Optional[int] = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
-    # 1. Update DB (Simplified: Just pushing to a 'releases' log or updating generic fields for now)
-    # Ideally we navigate the nested seasons array, but for this demo, we'll assume we just want to trigger the event.
     try:
         oid = ObjectId(media_id)
     except InvalidId:
-        return HTMLResponse(f"Invalid Media ID format: '{media_id}'. Must be a 24-character hex string.", status_code=400)
+        return HTMLResponse(f"Invalid Media ID format", status_code=400)
 
-    # We will just verify it exists.
     media = await db.media.find_one({"_id": oid})
     if not media:
         return HTMLResponse("Media not found", status_code=404)
-
-    # In a real app, we would update the specific season/episode in the document here.
-    # For now, we rely on the event.
     
-    # 2. Publish Kafka Event
+    # Publish Kafka Event
     producer = await get_producer()
     event = {
-        "event_type": "new_episode",
+        "event_type": "new_release",
         "media_id": media_id,
         "media_title": media["title"],
+        "media_type": media.get("media_type", "unknown"),
+        "release_title": release_title,
         "season": season_number,
         "episode": episode_number,
-        "episode_title": episode_title
+        "volume": volume_number,
+        "chapter": chapter_number
     }
     await producer.send_and_wait("media-updates", event)
     
@@ -159,7 +158,7 @@ async def create_media(
         await db.media.insert_one(media_item.dict())
         
         # Invalidate Cache
-        redis_client.delete(MEDIA_CACHE_KEY)
+        await redis_client.delete(MEDIA_CACHE_KEY)
         
         return RedirectResponse(url="/media", status_code=303)
     except Exception as e:

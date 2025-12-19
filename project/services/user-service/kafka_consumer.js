@@ -10,8 +10,18 @@ const kafka = new Kafka({
 const consumer = kafka.consumer({ groupId: 'user-service-group' });
 
 const runConsumer = async () => {
-  await consumer.connect();
-  await consumer.subscribe({ topic: 'media-updates', fromBeginning: false });
+  let connected = false;
+  while (!connected) {
+    try {
+      await consumer.connect();
+      await consumer.subscribe({ topic: 'media-updates', fromBeginning: false });
+      connected = true;
+      console.log('[User Service] Kafka Consumer connected');
+    } catch (err) {
+      console.error('[User Service] Failed to connect to Kafka. Retrying in 5s...', err.message);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
@@ -29,30 +39,40 @@ const runConsumer = async () => {
              await pool.query(query, [media_id]);
              console.log(`[User Service] Removed media ${media_id} from all user libraries.`);
         }
-        else if (event.event_type === 'new_episode') {
-          const { media_id, media_title, season, episode, episode_title } = event;
+        else if (event.event_type === 'new_release' || event.event_type === 'new_episode') {
+          // Handle both for backward compatibility or the new generic type
+          const { media_id, media_title, media_type, release_title, season, episode, volume, chapter } = event;
+          const epTitle = release_title || event.episode_title || "New Content";
 
-          // Find users watching this media
-          // We check for 'Watching' status.
+          // Construct Message based on type
+          let msgDetails = "";
+          if (season && episode) {
+            msgDetails = `S${season}E${episode}`;
+          } else if (volume && chapter) {
+            msgDetails = `Vol ${volume} Ch ${chapter}`;
+          } else if (chapter) {
+             msgDetails = `Ch ${chapter}`;
+          }
+          
+          const fullMessage = `New Release: ${media_title} ${msgDetails ? '- ' + msgDetails : ''} "${epTitle}"`;
+
+          // Find users watching/reading this media
           const query = `
             SELECT user_id FROM user_library 
-            WHERE media_id = $1 AND status = 'Watching'
+            WHERE media_id = $1 AND status IN ('Watching', 'Reading')
           `;
           const res = await pool.query(query, [media_id]);
           const users = res.rows;
 
-          console.log(`[User Service] Found ${users.length} users watching '${media_title}'`);
+          console.log(`[User Service] Found ${users.length} users tracking '${media_title}'`);
 
           for (const user of users) {
             const notification = {
               user_id: user.user_id,
               type: 'new_release',
-              message: `New Episode Released: ${media_title} - S${season}E${episode} "${episode_title}"`
+              message: fullMessage
             };
             
-            // Produce notification event
-            // Note: We reuse the producer connected in config/kafka.js
-            // Ensure producer is connected before sending (it should be)
             await producer.send({
               topic: 'notification-dispatch',
               messages: [

@@ -14,6 +14,7 @@ Contains the source code for the microservices.
         *   `auth.js`: Login/Register/Logout.
         *   `library.js`: Library management.
         *   `profile.js`: Stats calculation and dashboard.
+        *   `api.js`: Internal API for Dashboard Aggregation.
     *   `models/`: Database interaction (`user.js`, `library.js`).
     *   `views/`: Bootstrap EJS templates.
         *   `history.ejs`: User activity history.
@@ -24,6 +25,8 @@ Contains the source code for the microservices.
         *   `profile.ejs`: Dashboard stats.
         *   `profile_edit.ejs`: Profile settings.
     *   `config/`: Configuration (DB, Kafka).
+    *   `middleware/`:
+        *   `sessionAuth.js`: Redis-backed session authentication middleware.
     *   `migrate_v2.js`: Database migration script (adds season/episode columns).
 *   **media-service/**: Python/FastAPI application.
     *   `app/main.py`: Entry point.
