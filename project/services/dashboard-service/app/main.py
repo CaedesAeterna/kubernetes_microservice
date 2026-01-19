@@ -7,6 +7,8 @@ import asyncio
 import json
 from aiokafka import AIOKafkaConsumer
 from collections import deque
+from app.events_pb2 import MediaUpdate
+from google.protobuf.json_format import MessageToDict
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -40,8 +42,15 @@ async def consume_events():
     try:
         async for msg in consumer:
             try:
-                data = json.loads(msg.value.decode('utf-8'))
-                if data.get("event_type") in ["new_episode", "new_release"]:
+                # Deserialize Protobuf
+                event = MediaUpdate()
+                event.ParseFromString(msg.value)
+                
+                # Convert to Dict for Template compatibility
+                # preserving_proto_field_name=True ensures snake_case keys (e.g. media_title)
+                data = MessageToDict(event, preserving_proto_field_name=True)
+                
+                if data.get("event_type") in ["new_release"]:
                     print(f"[Dashboard] Received Event: {data}")
                     recent_events.appendleft(data) # Add to top
             except Exception as e:

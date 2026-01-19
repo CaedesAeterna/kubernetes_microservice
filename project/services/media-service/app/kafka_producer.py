@@ -11,8 +11,8 @@ async def get_producer():
     global producer
     if producer is None:
         producer = AIOKafkaProducer(
-            bootstrap_servers=KAFKA_BROKER,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            bootstrap_servers=KAFKA_BROKER
+            # value_serializer removed to support raw bytes (Protobuf)
         )
         # Retry Loop for Connection
         while True:

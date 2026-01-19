@@ -5,7 +5,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install Protoc
+RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
+
 COPY . .
+
+# Generate Proto Code
+RUN protoc -I=shared/protos --python_out=app shared/protos/events.proto
 
 EXPOSE 8000
 

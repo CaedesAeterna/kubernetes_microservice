@@ -5,9 +5,11 @@ from app.database import db, redis_client
 from app.models import MediaItem
 from app.kafka_producer import get_producer
 from app.auth import get_current_user
+from app.events_pb2 import MediaUpdate
 from bson import ObjectId
 from typing import Optional
 import json
+import time
 from datetime import datetime
 from bson.errors import InvalidId
 
@@ -35,20 +37,22 @@ async def release_content(
     if not media:
         return HTMLResponse("Media not found", status_code=404)
     
-    # Publish Kafka Event
+    # Publish Kafka Event (Protobuf)
     producer = await get_producer()
-    event = {
-        "event_type": "new_release",
-        "media_id": media_id,
-        "media_title": media["title"],
-        "media_type": media.get("media_type", "unknown"),
-        "release_title": release_title,
-        "season": season_number,
-        "episode": episode_number,
-        "volume": volume_number,
-        "chapter": chapter_number
-    }
-    await producer.send_and_wait("media-updates", event)
+    
+    proto_event = MediaUpdate()
+    proto_event.event_type = "new_release"
+    proto_event.media_id = media_id
+    proto_event.media_title = media["title"]
+    proto_event.media_type = media.get("media_type", "unknown")
+    proto_event.release_title = release_title
+    if season_number is not None: proto_event.season = season_number
+    if episode_number is not None: proto_event.episode = episode_number
+    if volume_number is not None: proto_event.volume = volume_number
+    if chapter_number is not None: proto_event.chapter = chapter_number
+    proto_event.timestamp = int(time.time())
+
+    await producer.send_and_wait("media-updates", proto_event.SerializeToString())
     
     # Invalidate Cache
     await redis_client.delete(MEDIA_CACHE_KEY)
@@ -66,13 +70,15 @@ async def delete_media(media_id: str, current_user: dict = Depends(get_current_u
     if result.deleted_count == 0:
         return HTMLResponse("Media not found", status_code=404)
 
-    # Publish Event
+    # Publish Event (Protobuf)
     producer = await get_producer()
-    event = {
-        "event_type": "media_deleted",
-        "media_id": media_id
-    }
-    await producer.send_and_wait("media-updates", event)
+    
+    proto_event = MediaUpdate()
+    proto_event.event_type = "media_deleted"
+    proto_event.media_id = media_id
+    proto_event.timestamp = int(time.time())
+
+    await producer.send_and_wait("media-updates", proto_event.SerializeToString())
     
     # Invalidate Cache
     await redis_client.delete(MEDIA_CACHE_KEY)

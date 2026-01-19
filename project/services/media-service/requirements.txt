@@ -5,3 +5,4 @@ motor
 aiokafka
 python-multipart
 redis
+protobuf==4.25.1

@@ -96,10 +96,17 @@ for service_path in "$services_dir"/*; do
         local_image="$service_name:$new_ver"
         remote_image="$REGISTRY_PREFIX/$service_name:$new_ver"
         
+        # COPY SHARED PROTOS (Temporary for Build)
+        echo "Copying shared protos to $service_path..."
+        cp -r shared "$service_path/"
+
         # Build
         echo "Building Image: $local_image"
         docker build -t "$local_image" "$service_path"
         
+        # CLEANUP SHARED PROTOS
+        rm -rf "$service_path/shared"
+
         # Tag for Remote Registry
         echo "Tagging: $remote_image"
         docker tag "$local_image" "$remote_image"
