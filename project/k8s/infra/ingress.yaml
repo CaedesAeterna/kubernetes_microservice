@@ -3,10 +3,18 @@ kind: Ingress
 metadata:
   name: media-tracker-ingress
   namespace: app
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - caedes.duckdns.org
+    secretName: caedes-duckdns-tls
   rules:
-  - http:
+  - host: caedes.duckdns.org
+    http:
       paths:
       - path: /auth
         pathType: Prefix

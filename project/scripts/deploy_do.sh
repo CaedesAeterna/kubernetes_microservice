@@ -1,12 +1,19 @@
 #!/bin/bash
 set -e
 
+# Resolve the project root directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Move to project root to ensure relative paths work
+cd "$PROJECT_ROOT"
+
 # Configuration
 REGISTRY_PREFIX="registry.digitalocean.com/tiamat"
 
 # 1. Read current version
 if [ ! -f VERSION ]; then
-    echo "VERSION file not found!"
+    echo "VERSION file not found in $PROJECT_ROOT"
     exit 1
 fi
 current_ver=$(cat VERSION)
@@ -29,13 +36,50 @@ new_ver="${major}.${minor}.${patch}"
 
 echo "Bumping to: $new_ver"
 
-# 2.5 Ensure Infrastructure (Mongo RS) is ready
+# 3. Deploy Infrastructure (DBs, Kafka, Redis, Ingress)
+# We apply these FIRST so they are ready (or starting) by the time apps deploy.
+echo "------------------------------------------------"
+echo "Deploying Infrastructure..."
+
+# Create namespaces if they don't exist
+kubectl create namespace app --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace database --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace kafka --dry-run=client -o yaml | kubectl apply -f -
+
+# Restore NGINX Ingress Controller (if missing)
+echo "Checking Ingress Controller..."
+if ! kubectl get svc -n ingress-nginx ingress-nginx-controller > /dev/null 2>&1; then
+    echo "Restoring NGINX Ingress Controller..."
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+else
+    echo "NGINX Ingress Controller already exists."
+fi
+
+# Apply Infra Manifests
+# Note: applying StatefulSets/PVCs is safe; it connects to existing volumes if available.
+kubectl apply -f k8s/infra/strimzi-rbac.yaml
+kubectl apply -f k8s/infra/kafka-cluster.yaml
+kubectl apply -f k8s/infra/kafka-topic.yaml
+kubectl apply -f k8s/infra/mongodb-replica-set.yaml
+kubectl apply -f k8s/infra/postgresql.yaml
+kubectl apply -f k8s/infra/redis.yaml
+kubectl apply -f k8s/infra/ingress.yaml
+
+echo "Infrastructure manifests applied."
+
+# 4. Verify Infrastructure (Mongo RS)
 echo "------------------------------------------------"
 echo "Verifying Infrastructure..."
+# This script contains a 'wait' command for Mongo pods
 ./scripts/init_mongo_rs.sh
+
+# Optional: Wait for Postgres (Good practice to ensure DB is up before App)
+echo "Waiting for Postgres..."
+kubectl wait --for=condition=ready pod -l app=postgres -n database --timeout=120s || echo "Postgres wait timed out (continuing...)"
+
 echo "------------------------------------------------"
 
-# 3. Dynamic Build, Tag, Push & Deploy
+# 5. Dynamic Build, Tag, Push & Deploy Apps
 services_dir="services"
 
 echo "Detected Services:"
@@ -83,12 +127,12 @@ for service_path in "$services_dir"/*; do
     fi
 done
 
-# 4. Save new version
+# 6. Save new version
 echo $new_ver > VERSION
 echo "------------------------------------------------"
 echo "Deployment of v$new_ver initiated."
 
-# 5. Dynamic Wait for Rollout
+# 7. Dynamic Wait for Rollout
 for service_path in "$services_dir"/*; do
     if [ -d "$service_path" ]; then
         service_name=$(basename "$service_path")

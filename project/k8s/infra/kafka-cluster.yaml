@@ -57,4 +57,4 @@ spec:
       type: persistent-claim
       size: 10Gi
       class: do-block-storage
-      deleteClaim: true
+      deleteClaim: false
