@@ -4,21 +4,26 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const userModel = require('./models/user');
 const libraryModel = require('./models/library');
+const friendshipModel = require('./models/friendship');
 const authRoutes = require('./routes/auth');
 const libraryRoutes = require('./routes/library');
 const profileRoutes = require('./routes/profile');
+const publicProfileRoutes = require('./routes/public_profile');
 const apiRoutes = require('./routes/api');
+const friendsRoutes = require('./routes/friends');
 const requireAuth = require('./middleware/sessionAuth');
 const runConsumer = require('./kafka_consumer');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+
 // Initialize DB
 (async () => {
   try {
     await userModel.createTable();
     await libraryModel.createLibraryTable();
+    await friendshipModel.createFriendshipTable();
     console.log("Database initialized successfully");
   } catch (err) {
     console.error("Failed to initialize database:", err);
@@ -47,6 +52,8 @@ app.set('views', path.join(__dirname, 'views'));
 app.use('/auth', authRoutes);
 app.use('/library', requireAuth, libraryRoutes);
 app.use('/profile', requireAuth, profileRoutes);
+app.use('/friends', requireAuth, friendsRoutes);
+app.use('/u', requireAuth, publicProfileRoutes);
 app.use('/api', apiRoutes); // Internal API (Open for Dashboard Service)
 app.use('/', authRoutes);
 app.use('/', requireAuth, libraryRoutes);

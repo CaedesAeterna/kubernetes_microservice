@@ -31,7 +31,13 @@ const createLibraryTable = async () => {
   try {
     await pool.query(queryLibrary);
     await pool.query(queryHistory);
-    console.log("User Library and History tables created successfully");
+    
+    // Migrations for Social Features
+    await pool.query("ALTER TABLE user_library ADD COLUMN IF NOT EXISTS review_text TEXT;");
+    await pool.query("ALTER TABLE user_library ADD COLUMN IF NOT EXISTS watched_date DATE;");
+    await pool.query("ALTER TABLE user_library ADD COLUMN IF NOT EXISTS is_rewatch BOOLEAN DEFAULT FALSE;");
+    
+    console.log("User Library and History tables created/updated successfully");
   } catch (err) {
     console.error("Error creating tables", err);
   }
@@ -91,17 +97,22 @@ const getItemById = async (id) => {
     return res.rows[0];
 };
 
-const updateEntry = async (id, status, progress, rating, season, episode) => {
+const updateEntry = async (id, status, progress, rating, season, episode, review, date, rewatch) => {
   // Fetch old state for comparison
   const oldItem = await getItemById(id);
   
   const query = `
     UPDATE user_library 
-    SET status = $1, progress = $2, rating = $3, current_season = $4, current_episode = $5
-    WHERE id = $6 
+    SET status = $1, progress = $2, rating = $3, current_season = $4, current_episode = $5,
+        review_text = $6, watched_date = $7, is_rewatch = $8
+    WHERE id = $9 
     RETURNING *;
   `;
-  const res = await pool.query(query, [status, progress, rating, season || 0, episode || 0, id]);
+  const res = await pool.query(query, [
+      status, progress, rating, season || 0, episode || 0, 
+      review || null, date || null, rewatch || false, 
+      id
+  ]);
   const newItem = res.rows[0];
 
   if (oldItem && newItem) {
@@ -111,6 +122,7 @@ const updateEntry = async (id, status, progress, rating, season, episode) => {
       if (oldItem.rating !== newItem.rating) changes.push(`Rating: ${oldItem.rating} -> ${newItem.rating}`);
       if (oldItem.current_season !== newItem.current_season) changes.push(`Season: ${oldItem.current_season} -> ${newItem.current_season}`);
       if (oldItem.current_episode !== newItem.current_episode) changes.push(`Episode: ${oldItem.current_episode} -> ${newItem.current_episode}`);
+      if (oldItem.review_text !== newItem.review_text) changes.push(`Review Updated`);
       
       if (changes.length > 0) {
           await addHistory(oldItem.user_id, oldItem.media_title, 'UPDATED', changes.join(', '));

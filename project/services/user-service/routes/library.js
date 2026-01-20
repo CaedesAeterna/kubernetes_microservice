@@ -82,11 +82,14 @@ router.post('/add', async (req, res) => {
 
 router.post('/update', async (req, res) => {
     // rating might be "" if left empty in the form. Convert to null for DB.
-    let { id, username, status, progress, rating, season, episode, action } = req.body;
+    let { id, username, status, progress, rating, season, episode, action, review, watched_date, is_rewatch } = req.body;
     
     if (rating === "") {
         rating = null;
     }
+    
+    // Checkbox handling
+    const rewatch = (is_rewatch === 'on' || is_rewatch === 'true');
 
     // Handle Quick Increment Logic
     if (action === 'inc_season') {
@@ -107,7 +110,7 @@ router.post('/update', async (req, res) => {
     }
 
     try {
-        await libraryModel.updateEntry(id, status, progress, rating, season, episode);
+        await libraryModel.updateEntry(id, status, progress, rating, season, episode, review, watched_date, rewatch);
         res.redirect(`/library`);
     } catch (err) {
         console.error(err);

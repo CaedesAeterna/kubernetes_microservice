@@ -44,6 +44,20 @@ spec:
             name: user-service
             port:
               number: 80
+      - path: /friends
+        pathType: Prefix
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 80
+      - path: /u
+        pathType: Prefix
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 80
       - path: /media
         pathType: Prefix
         backend:

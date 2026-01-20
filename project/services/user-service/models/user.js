@@ -35,6 +35,12 @@ const findUserByUsername = async (username) => {
   return res.rows[0];
 };
 
+const findUserByUsernameInsensitive = async (username) => {
+  const query = 'SELECT * FROM users WHERE LOWER(username) = LOWER($1)';
+  const res = await pool.query(query, [username]);
+  return res.rows[0];
+};
+
 const updateUser = async (username, email, bio) => {
   const query = 'UPDATE users SET email = $1, bio = $2 WHERE username = $3 RETURNING *';
   const res = await pool.query(query, [email, bio, username]);
@@ -45,5 +51,6 @@ module.exports = {
   createTable,
   createUser,
   findUserByUsername,
+  findUserByUsernameInsensitive,
   updateUser
 };

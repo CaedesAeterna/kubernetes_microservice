@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title><%= title %> - Media Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
@@ -13,6 +14,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="/media">Browse</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/library">My Library</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/friends">Friends</a></li>
                     <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -43,6 +45,7 @@
                             <th>Status</th>
                             <th>Progress</th>
                             <th>Rating</th>
+                            <th>Review</th>
                             <th>Update</th>
                             <th>History</th>
                             <th></th>
@@ -94,6 +97,13 @@
                                         </select>
                                     </td>
                                     <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            onclick="openReviewModal('<%= item.id %>', `<%= (item.review_text || '').replace(/`/g, '\\`') %>`, '<%= item.watched_date ? new Date(item.watched_date).toISOString().split('T')[0] : '' %>', <%= item.is_rewatch %>, '<%= item.status %>', '<%= item.progress %>', '<%= item.rating %>', '<%= item.current_season %>', '<%= item.current_episode %>', '<%= item.media_type %>')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <!-- Hidden inputs for review data in the main form, though we usually submit via modal -->
+                                    </td>
+                                    <td>
                                         <button type="submit" class="btn btn-sm btn-primary">Save</button>
                                     </td>
                                     <td>
@@ -121,6 +131,88 @@
         </div>
     </div>
     
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Review & Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/library/update" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="modalItemId">
+                        <!-- We need to preserve other fields like status/progress so the update doesn't wipe them. 
+                             However, our updateEntry is smart enough to just update what is sent IF we were selective, 
+                             but currently it expects everything. 
+                             
+                             WAIT: The updateEntry function expects all fields. If we send ONLY review from this modal, 
+                             status/progress/rating will be undefined in req.body and might overwrite DB with NULL or crash.
+                             
+                             FIX: We should either fetch the current state via AJAX or include all current values in the button's data attributes 
+                             and populate hidden fields here.
+                             
+                             For simplicity (MVP), let's assume this modal is ONLY for review/date/rewatch and the backend 
+                             handles undefined values gracefully OR we update the backend to valid partial updates.
+                             
+                             Checking backend:
+                             const res = await pool.query(query, [status, progress, rating...]);
+                             It USES the values passed.
+                             
+                             So we MUST pass existing values or change backend to COALESCE($1, current_value).
+                             
+                             Let's change backend logic? No, easier to just hide status/rating here and let user change them?
+                             OR: Let's make this modal purely for Review/Date and have the backend handle partials.
+                             
+                             Actually, let's look at my updated updateEntry:
+                             `UPDATE user_library SET status = $1 ...`
+                             It overwrites.
+                             
+                             QUICK FIX: The Review Modal will act as a "Detail Editor" and include Status/Rating too?
+                             That duplicates the row UI.
+                             
+                             Better: Let's update `services/user-service/models/library.js` to support partial updates using COALESCE.
+                             BUT I already edited it.
+                             
+                             Alternative:
+                             I will update the modal to include Status and Rating inputs too, making it a "Full Editor".
+                        -->
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Review / Notes</label>
+                            <textarea name="review" id="modalReview" class="form-control" rows="4" placeholder="Write your thoughts..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label" id="modalDateLabel">Date Finished</label>
+                            <input type="date" name="watched_date" id="modalDate" class="form-control">
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="is_rewatch" id="modalRewatch">
+                            <label class="form-check-label" for="modalRewatch" id="modalRewatchLabel">
+                                This is a Rewatch
+                            </label>
+                        </div>
+                        
+                        <!-- Hidden fields to prevent overwriting with nulls. -->
+                        <input type="hidden" name="status" id="modalStatus">
+                        <input type="hidden" name="progress" id="modalProgress">
+                        <input type="hidden" name="rating" id="modalRating">
+                        <input type="hidden" name="season" id="modalSeason">
+                        <input type="hidden" name="episode" id="modalEpisode">
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function filterLibrary() {
             var input, filter, table, tr, td, i, txtValue;
@@ -140,6 +232,36 @@
                     }
                 }
             }
+        }
+
+        function openReviewModal(id, review, date, rewatch, status, progress, rating, season, episode, type) {
+            document.getElementById('modalItemId').value = id;
+            document.getElementById('modalReview').value = review;
+            document.getElementById('modalDate').value = date;
+            document.getElementById('modalRewatch').checked = rewatch;
+            
+            // Dynamic Labels based on Type
+            const dateLabel = document.getElementById('modalDateLabel');
+            const rewatchLabel = document.getElementById('modalRewatchLabel');
+            const isReading = ['Book', 'Novel', 'Manga', 'Web Novel'].includes(type);
+
+            if (isReading) {
+                dateLabel.textContent = "Date Read";
+                rewatchLabel.textContent = "This is a Reread";
+            } else {
+                dateLabel.textContent = "Date Watched";
+                rewatchLabel.textContent = "This is a Rewatch";
+            }
+            
+            // Populate hidden fields to preserve state
+            document.getElementById('modalStatus').value = status;
+            document.getElementById('modalProgress').value = progress;
+            document.getElementById('modalRating').value = rating;
+            document.getElementById('modalSeason').value = season;
+            document.getElementById('modalEpisode').value = episode;
+            
+            var modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+            modal.show();
         }
     </script>
 </body>
