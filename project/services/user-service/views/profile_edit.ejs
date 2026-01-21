@@ -27,7 +27,15 @@
                         <h3>Edit Profile: <%= username %></h3>
                     </div>
                     <div class="card-body">
+                        <% if (typeof error !== 'undefined' && error) { %>
+                            <div class="alert alert-danger"><%= error %></div>
+                        <% } %>
                         <form action="/profile/edit" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" name="new_username" class="form-control" value="<%= username %>" required>
+                                <div class="form-text">Changing this will update your public profile link.</div>
+                            </div>
                             <div class="mb-3">
                                 <label class="form-label">Email Address</label>
                                 <input type="email" name="email" class="form-control" value="<%= user.email || '' %>" placeholder="name@example.com">

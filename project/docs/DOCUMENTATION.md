@@ -152,6 +152,8 @@ message MediaUpdate {
     *   *Effect:* Updates DB -> Invalidates Cache -> **Publishes Protobuf Message**.
 *   `GET /media`: **Query.** Returns list of media.
     *   *Effect:* Checks Redis `media_list:{query}`. If miss, queries Mongo and caches for 60s.
+*   **Ownership:**
+    *   Editing (`/media/{id}/edit`) and Deleting (`/media/{id}/delete`) are restricted. Only the user who created the item (`creator` field) can perform these actions.
 
 ### B. User Service
 *   **Role:** User Identity & Library Tracking.
@@ -160,6 +162,9 @@ message MediaUpdate {
 
 **Key Workflows:**
 *   **Auth:** Login generates a Session ID (UUID), stored in Redis with 24h TTL, returned as `session_id` HttpOnly cookie.
+*   **Profile Management:**
+    *   Users can change their username via `/profile/edit`.
+    *   Triggers a Kafka event (`user_updated`) to synchronize the new name across the system (e.g., updating media ownership).
 *   **Social & Friends:**
     *   **Friend Requests:** Case-sensitive username lookup to send requests.
     *   **Public Profiles:** `/u/:username` displays a read-only view of a friend's library (hidden for non-friends).

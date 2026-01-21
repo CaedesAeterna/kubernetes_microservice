@@ -76,6 +76,14 @@ graph TD
     *   Group ID: `notification-service-group`
     *   Action: Simulates sending a welcome email (logs to console).
 
+### Topic: `user-registered` (User Updates)
+*   **Producer:** `user-service` (Node.js)
+    *   Trigger: When a user updates their username (`POST /profile/edit`).
+    *   Payload: JSON `{ event: "user_updated", old_username: "...", new_username: "..." }`
+*   **Consumer:** `media-service` (Python)
+    *   Group ID: `media-service-group`
+    *   Action: Updates the `creator` field in the `media` collection for all items created by `old_username`.
+
 ### Topic: `media-updates`
 *   **Producer:** `media-service` (Python)
     *   Trigger: When a new episode is released (via `POST /media/{id}/release`).

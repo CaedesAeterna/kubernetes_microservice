@@ -159,7 +159,8 @@ async def create_media(
             title=title, 
             media_type=media_type, 
             description=description,
-            seasons=seasons_data
+            seasons=seasons_data,
+            creator=current_user.get("username")
         )
         await db.media.insert_one(media_item.dict())
         
@@ -173,3 +174,88 @@ async def create_media(
 @router.get("/media/new")
 async def new_media_form(request: Request, current_user: dict = Depends(get_current_user)):
     return templates.TemplateResponse("media_form.html", {"request": request})
+
+@router.get("/media/{media_id}/edit")
+async def edit_media_form(
+    media_id: str, 
+    request: Request, 
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        oid = ObjectId(media_id)
+    except InvalidId:
+        return HTMLResponse("Invalid Media ID", status_code=400)
+
+    media = await db.media.find_one({"_id": oid})
+    if not media:
+        return HTMLResponse("Media not found", status_code=404)
+    
+    # Ownership Check
+    if media.get("creator") != current_user.get("username"):
+        return templates.TemplateResponse("not_authorized.html", {"request": request})
+
+    # Convert ObjectId to string and prepare seasons JSON for the form
+    media["id"] = str(media["_id"])
+    seasons_json = json.dumps(media.get("seasons", []))
+    
+    return templates.TemplateResponse("media_form.html", {
+        "request": request, 
+        "media": media,
+        "seasons_json": seasons_json
+    })
+
+@router.post("/media/{media_id}/update")
+async def update_media(
+    media_id: str,
+    request: Request,
+    title: str = Form(...),
+    media_type: str = Form(...),
+    description: Optional[str] = Form(None),
+    seasons_json: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        oid = ObjectId(media_id)
+    except InvalidId:
+        return HTMLResponse("Invalid Media ID", status_code=400)
+
+    # 1. Fetch existing
+    existing_media = await db.media.find_one({"_id": oid})
+    if not existing_media:
+        return HTMLResponse("Media not found", status_code=404)
+
+    # 2. Ownership Check
+    if existing_media.get("creator") != current_user.get("username"):
+        return templates.TemplateResponse("not_authorized.html", {"request": request})
+
+    # 3. Parse Seasons
+    seasons_data = []
+    if seasons_json and seasons_json.strip():
+        import json
+        seasons_data = json.loads(seasons_json)
+
+    # 4. Update in MongoDB
+    update_data = {
+        "title": title,
+        "media_type": media_type,
+        "description": description,
+        "seasons": seasons_data
+    }
+    
+    await db.media.update_one({"_id": oid}, {"$set": update_data})
+
+    # 5. Publish Kafka Event (Media Updated)
+    producer = await get_producer()
+    proto_event = MediaUpdate()
+    proto_event.event_type = "media_updated"
+    proto_event.media_id = media_id
+    proto_event.media_title = title
+    proto_event.media_type = media_type
+    proto_event.timestamp = int(time.time())
+    
+    await producer.send_and_wait("media-updates", proto_event.SerializeToString())
+
+    # 6. Invalidate Cache
+    await redis_client.delete(MEDIA_CACHE_KEY)
+
+    return RedirectResponse(url="/media", status_code=303)

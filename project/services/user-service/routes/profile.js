@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const libraryModel = require('../models/library');
 const userModel = require('../models/user');
+const redisClient = require('../config/redis');
+const producer = require('../config/kafka');
 
 router.get('/', async (req, res) => {
   const username = req.cookies.username;
@@ -68,11 +70,70 @@ router.get('/edit', async (req, res) => {
 });
 
 router.post('/edit', async (req, res) => {
-    const username = req.cookies.username;
-    const { email, bio } = req.body;
+    const currentUsername = req.cookies.username;
+    const sessionId = req.cookies.session_id;
+    const { new_username, email, bio } = req.body;
     
+    // Fallback if new_username is not provided
+    const targetUsername = new_username || currentUsername;
+
     try {
-        await userModel.updateUser(username, email, bio);
+        // 1. Check uniqueness if changing
+        if (targetUsername !== currentUsername) {
+            const existing = await userModel.findUserByUsername(targetUsername);
+            if (existing) {
+                // Fetch user data again to render the form correctly
+                const user = await userModel.findUserByUsername(currentUsername);
+                return res.render('profile_edit', { 
+                    title: 'Edit Profile', 
+                    username: currentUsername, 
+                    user: { ...user, email, bio }, // Preserve input
+                    error: 'Username already taken' 
+                });
+            }
+        }
+
+        // 2. Update DB
+        // updateUser(currentUsername, newUsername, email, bio)
+        await userModel.updateUser(currentUsername, targetUsername, email, bio);
+
+        // 3. Update Redis Session
+        if (sessionId) {
+            const sessionKey = `session:${sessionId}`;
+            const sessionDataString = await redisClient.get(sessionKey);
+            if (sessionDataString) {
+                const sessionData = JSON.parse(sessionDataString);
+                sessionData.username = targetUsername;
+                // Extend session
+                await redisClient.set(sessionKey, JSON.stringify(sessionData), { EX: 86400 });
+            }
+        }
+
+        // 4. Send Kafka Event (User Updated)
+        if (targetUsername !== currentUsername) {
+            try {
+                // We reuse 'user-registered' topic for now as a general user-events channel
+                await producer.send({
+                    topic: 'user-registered',
+                    messages: [
+                        { 
+                            value: JSON.stringify({ 
+                                event: 'user_updated',
+                                old_username: currentUsername,
+                                new_username: targetUsername
+                            }) 
+                        },
+                    ],
+                });
+                console.log(`[Profile] Emitted user_updated event: ${currentUsername} -> ${targetUsername}`);
+            } catch (kErr) {
+                console.error("[Profile] Kafka send error:", kErr);
+            }
+        }
+
+        // 5. Update Cookie (Legacy/Shared)
+        res.cookie('username', targetUsername, { path: '/', httpOnly: true });
+
         res.redirect('/profile');
     } catch (err) {
         console.error(err);

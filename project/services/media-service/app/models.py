@@ -16,6 +16,7 @@ class MediaItem(BaseModel):
     media_type: str # movie, series, book, etc.
     description: Optional[str] = None
     seasons: Optional[List[Season]] = [] # New field for Series support
+    creator: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class MediaItemCreate(MediaItem):

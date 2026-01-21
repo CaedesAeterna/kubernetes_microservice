@@ -52,14 +52,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <% library.forEach(function(item) { %>
+                        <% library.forEach(function(item) { 
+                           const formId = 'form-' + item.id;
+                        %>
                             <tr>
-                                <form action="/library/update" method="POST">
-                                    <input type="hidden" name="id" value="<%= item.id %>">
+                                    <!-- Hidden Form ID for association -->
+                                    <input type="hidden" name="id" value="<%= item.id %>" form="<%= formId %>">
+                                    
                                     <td class="align-middle fw-bold title-cell"><%= item.media_title %></td>
                                     <td class="align-middle"><span class="badge bg-info text-dark"><%= item.media_type %></span></td>
                                     <td>
-                                        <select name="status" class="form-select form-select-sm">
+                                        <select name="status" class="form-select form-select-sm" form="<%= formId %>">
                                             <option value="Plan to Watch" <%= item.status === 'Plan to Watch' ? 'selected' : '' %>>Plan to Watch</option>
                                             <option value="Watching" <%= item.status === 'Watching' ? 'selected' : '' %>>Watching/Reading</option>
                                             <option value="Completed" <%= item.status === 'Completed' ? 'selected' : '' %>>Completed</option>
@@ -71,25 +74,25 @@
                                             <div class="d-flex flex-column gap-1">
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text" style="width: 35px;">S</span>
-                                                    <input type="number" name="season" value="<%= item.current_season || 0 %>" class="form-control">
-                                                    <button type="submit" name="action" value="inc_season" class="btn btn-success fw-bold" title="+1 Season">+</button>
+                                                    <input type="number" name="season" value="<%= item.current_season || 0 %>" class="form-control" form="<%= formId %>">
+                                                    <button type="submit" name="action" value="inc_season" class="btn btn-success fw-bold" title="+1 Season" form="<%= formId %>">+</button>
                                                 </div>
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text" style="width: 35px;">E</span>
-                                                    <input type="number" name="episode" value="<%= item.current_episode || 0 %>" class="form-control">
-                                                    <button type="submit" name="action" value="inc_episode" class="btn btn-success fw-bold" title="+1 Episode">+</button>
+                                                    <input type="number" name="episode" value="<%= item.current_episode || 0 %>" class="form-control" form="<%= formId %>">
+                                                    <button type="submit" name="action" value="inc_episode" class="btn btn-success fw-bold" title="+1 Episode" form="<%= formId %>">+</button>
                                                 </div>
                                             </div>
-                                            <input type="hidden" name="progress" value="S<%= item.current_season %> E<%= item.current_episode %>">
+                                            <input type="hidden" name="progress" value="S<%= item.current_season %> E<%= item.current_episode %>" form="<%= formId %>">
                                         <% } else { %>
                                             <div class="input-group input-group-sm">
-                                                <input type="text" name="progress" value="<%= item.progress %>" class="form-control" placeholder="Page 1 / Ch 5">
-                                                <button type="submit" name="action" value="inc_progress" class="btn btn-success fw-bold" title="+1 Chapter/Page">+</button>
+                                                <input type="text" name="progress" value="<%= item.progress %>" class="form-control" placeholder="Page 1 / Ch 5" form="<%= formId %>">
+                                                <button type="submit" name="action" value="inc_progress" class="btn btn-success fw-bold" title="+1 Chapter/Page" form="<%= formId %>">+</button>
                                             </div>
                                         <% } %>
                                     </td>
                                     <td>
-                                        <select name="rating" class="form-select form-select-sm" style="width: 70px;">
+                                        <select name="rating" class="form-select form-select-sm" style="width: 70px;" form="<%= formId %>">
                                             <option value="0" <%= !item.rating ? 'selected' : '' %>>-</option>
                                             <% for(let i=1; i<=10; i++) { %>
                                                 <option value="<%= i %>" <%= item.rating == i ? 'selected' : '' %>><%= i %></option>
@@ -101,20 +104,28 @@
                                             onclick="openReviewModal('<%= item.id %>', `<%= (item.review_text || '').replace(/`/g, '\\`') %>`, '<%= item.watched_date ? new Date(item.watched_date).toISOString().split('T')[0] : '' %>', <%= item.is_rewatch %>, '<%= item.status %>', '<%= item.progress %>', '<%= item.rating %>', '<%= item.current_season %>', '<%= item.current_episode %>', '<%= item.media_type %>')">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <!-- Hidden inputs for review data in the main form, though we usually submit via modal -->
                                     </td>
                                     <td>
-                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <button type="submit" class="btn btn-sm btn-primary" form="<%= formId %>">Save</button>
                                     </td>
                                     <td>
                                         <a href="/library/history?title=<%= encodeURIComponent(item.media_title) %>" class="btn btn-sm btn-outline-secondary">Log</a>
                                     </td>
                                     <td>
-                                        <button type="submit" formaction="/library/delete" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this item from your library?');" title="Remove">
-                                            &times;
-                                        </button>
+                                        <!-- Delete is tricky. It needs a different Action URL. 
+                                             We can use the same form but with a different formaction, OR a separate form.
+                                             Let's use a separate form for Delete to keep it clean, as it needs only ID.
+                                        -->
+                                        <form action="/library/delete" method="POST" style="display:inline;">
+                                            <input type="hidden" name="id" value="<%= item.id %>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this item from your library?');" title="Remove">
+                                                &times;
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- The Main Update Form -->
+                                        <form id="<%= formId %>" action="/library/update" method="POST" style="display:none;"></form>
                                     </td>
-                                </form>
                             </tr>
                         <% }); %>
                         <% if (library.length === 0) { %>
@@ -263,6 +274,58 @@
             var modal = new bootstrap.Modal(document.getElementById('reviewModal'));
             modal.show();
         }
+
+        // Auto-Save Feature
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('select[name="status"], select[name="rating"]');
+            
+            inputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const formId = this.getAttribute('form');
+                    const form = document.getElementById(formId);
+                    
+                    if (!form) {
+                        console.error("Auto-save: Associated form not found for", this);
+                        return;
+                    }
+
+                    const formData = new FormData(form);
+                    const data = new URLSearchParams(formData);
+                    data.append('ajax', 'true');
+
+                    // Visual Feedback: Saving (Yellow Border)
+                    const originalBorder = this.style.borderColor;
+                    this.style.borderColor = '#ffc107'; 
+                    this.style.borderWidth = '2px';
+
+                    fetch('/library/update', {
+                        method: 'POST',
+                        body: data,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(res => {
+                        if (res.success) {
+                            // Success (Green)
+                            this.style.borderColor = '#198754';
+                            setTimeout(() => {
+                                this.style.borderColor = originalBorder;
+                                this.style.borderWidth = '';
+                            }, 1000);
+                        } else {
+                            // Error (Red)
+                            this.style.borderColor = '#dc3545';
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Auto-save error:', err);
+                        this.style.borderColor = '#dc3545';
+                    });
+                });
+            });
+        });
     </script>
 </body>
 </html>

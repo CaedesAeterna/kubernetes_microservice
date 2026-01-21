@@ -40,7 +40,7 @@ The system currently supports and tracks:
 ### 3.4. Search & Discovery (Implemented)
 *   Search for media by title, author/director, genre, or tags.
 *   Filter by media type and status.
-*   **Global Delete:** Admin/Users can delete media items from the catalog, which automatically cleans up all user libraries.
+*   **Global Delete:** Users can delete media items from the catalog, which automatically cleans up all user libraries.
 
 ### 3.5. Notifications (Implemented)
 *   **Welcome Email:** Simulated email notification upon user registration via Kafka (`user-registered`).

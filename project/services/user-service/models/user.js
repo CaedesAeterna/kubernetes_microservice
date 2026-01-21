@@ -41,9 +41,10 @@ const findUserByUsernameInsensitive = async (username) => {
   return res.rows[0];
 };
 
-const updateUser = async (username, email, bio) => {
-  const query = 'UPDATE users SET email = $1, bio = $2 WHERE username = $3 RETURNING *';
-  const res = await pool.query(query, [email, bio, username]);
+const updateUser = async (currentUsername, newUsername, email, bio) => {
+  const query = 'UPDATE users SET username = $2, email = $3, bio = $4 WHERE username = $1 RETURNING *';
+  const values = [currentUsername, newUsername, email, bio];
+  const res = await pool.query(query, values);
   return res.rows[0];
 };
 

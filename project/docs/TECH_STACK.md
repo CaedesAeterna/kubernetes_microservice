@@ -6,7 +6,7 @@
 *   **API Gateway / Ingress Controller:** NGINX
 
 ## Databases
-*   **Relational:** PostgreSQL (User data, Auth, structured relationships)
+*   **Relational:** PostgreSQL (High Availability Cluster: Primary-Replica, User data, Auth)
 *   **NoSQL:** MongoDB (Media metadata, catalog, flexible schema documents)
 *   **In-Memory Store:** Redis (Media Service caching, User Service session management)
 

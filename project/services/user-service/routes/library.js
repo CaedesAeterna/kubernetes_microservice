@@ -111,6 +111,11 @@ router.post('/update', async (req, res) => {
 
     try {
         await libraryModel.updateEntry(id, status, progress, rating, season, episode, review, watched_date, rewatch);
+        
+        if (req.body.ajax) {
+            return res.json({ success: true });
+        }
+        
         res.redirect(`/library`);
     } catch (err) {
         console.error(err);
